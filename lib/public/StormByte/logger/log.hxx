@@ -42,15 +42,15 @@
 
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
-#include <StormByte/clonable.hxx>
-#include <StormByte/cstring.hxx>
+#include <StormByte/safe/clonable.hxx>
+#include <StormByte/safe/cstring.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wcstring.hxx>
+#include <StormByte/safe/wstring.hxx>
 #include <StormByte/type_traits.hxx>
-#include <StormByte/wcstring.hxx>
 
 #include <cstddef>
 #include <memory>
@@ -108,7 +108,7 @@ namespace StormByte::Logger {
 	 * and StormByte::BinaryData. Default formatting is Base64. With hex(N)
 	 * they use BinaryData::HexDump(N). Text still uses the 0xAA dump.
 	 */
-	class STORMBYTE_LOGGER_PUBLIC Log : protected StormByte::Clonable<Log> {
+	class STORMBYTE_LOGGER_PUBLIC Log : protected StormByte::Safe::Clonable<Log> {
 		friend STORMBYTE_LOGGER_PUBLIC Log& humanreadable_number(Log& log) noexcept;
 		friend STORMBYTE_LOGGER_PUBLIC Log& humanreadable_bytes(Log& log) noexcept;
 		friend STORMBYTE_LOGGER_PUBLIC Log& nohumanreadable(Log& log) noexcept;
@@ -118,7 +118,7 @@ namespace StormByte::Logger {
 			/**
 			 * @brief Owner returned by Clone, Move and Scope. Base's heap.
 			 */
-			using PointerType = StormByte::Clonable<Log>::PointerType;
+			using PointerType = StormByte::Safe::Clonable<Log>::PointerType;
 
 			/**
 			 * @brief Construct a Log writing to out.
@@ -164,7 +164,7 @@ namespace StormByte::Logger {
 			/**
 			 * @brief Another facade on the same backend, with a sticky component path.
 			 * @param path Segment relative to this facade, or a /-separated path.
-			 * @return @ref StormByte::Shared of a Log (ThreadedLog if *this is one). Never null.
+				 * @return @ref StormByte::Safe::Shared of a Log (ThreadedLog if *this is one). Never null.
 			 * @note Does not register the component and does not preconfigure Format, Color or Throttle.
 			 *       An empty path returns a clone of this facade.
 			 */
@@ -221,7 +221,7 @@ namespace StormByte::Logger {
 			 * @brief Get the effective current header format.
 			 * @return Owned copy of the temporary, component-specific or general format.
 			 */
-			virtual StormByte::String::String Format() const;
+			virtual StormByte::Safe::String Format() const;
 
 			/**
 			 * @brief Set or remove a component-specific header format.
@@ -236,7 +236,7 @@ namespace StormByte::Logger {
 			 * @param component Component path.
 			 * @return Owned copy of the component format or general format.
 			 */
-			virtual StormByte::String::String Format(std::string_view component) const;
+			virtual StormByte::Safe::String Format(std::string_view component) const;
 
 			/**
 			 * @brief Install a throttle rule.
@@ -392,11 +392,23 @@ namespace StormByte::Logger {
 			}
 
 			/**
+			 * @brief Stream caller-owned narrow text without passing its std::string object across the DLL boundary.
+			 * @param v Text viewed during this call and copied into the logger's line buffer.
+			 * @return Reference to this logger.
+			 */
+			inline Log& operator<<(const std::string& v) {
+				if (!WillWrite()) [[likely]]
+					return *this;
+				WriteValue(std::string_view{v});
+				return *this;
+			}
+
+			/**
 			 * @brief Stream owned UTF-8 bytes.
 			 * @param v Buffer owned by Base. Copied into the line buffer.
 			 * @return Reference to this logger.
 			 */
-			inline Log& operator<<(const StormByte::CString& v) {
+			inline Log& operator<<(const StormByte::Safe::CString& v) {
 				if (!WillWrite()) [[likely]]
 					return *this;
 				WriteValue(static_cast<std::string_view>(v));
@@ -405,10 +417,10 @@ namespace StormByte::Logger {
 
 			/**
 			 * @brief Stream owned UTF-8 text.
-			 * @param v Text owned by String. Copied into the line buffer.
+			 * @param v Text owned by Base. Copied into the line buffer.
 			 * @return Reference to this logger.
 			 */
-			inline Log& operator<<(const StormByte::String::String& v) {
+			inline Log& operator<<(const StormByte::Safe::String& v) {
 				if (!WillWrite()) [[likely]]
 					return *this;
 				WriteValue(static_cast<std::string_view>(v));
@@ -444,7 +456,7 @@ namespace StormByte::Logger {
 			 * @param v Buffer owned by Base. Copied into the line buffer.
 			 * @return Reference to this logger.
 			 */
-			inline Log& operator<<(const StormByte::WCString& v) {
+			inline Log& operator<<(const StormByte::Safe::WCString& v) {
 				if (!WillWrite()) [[likely]]
 					return *this;
 				Write(static_cast<std::wstring_view>(v));
@@ -453,10 +465,10 @@ namespace StormByte::Logger {
 
 			/**
 			 * @brief Stream owned wide text.
-			 * @param v Text owned by String. Copied into the line buffer.
+			 * @param v Text owned by Base. Copied into the line buffer.
 			 * @return Reference to this logger.
 			 */
-			inline Log& operator<<(const StormByte::String::WString& v) {
+			inline Log& operator<<(const StormByte::Safe::WString& v) {
 				if (!WillWrite()) [[likely]]
 					return *this;
 				Write(static_cast<std::wstring_view>(v));
@@ -667,7 +679,7 @@ namespace StormByte::Logger {
 			Log(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format);
 
 			std::shared_ptr<Engine> m_engine;			///< Shared backend
-			StormByte::String::String m_scope_path;			///< Sticky component path; empty = root facade
+			StormByte::Safe::String m_scope_path;			///< Sticky component path; empty = root facade
 
 			/**
 			 * @brief Whether the current line level will be written.
@@ -714,13 +726,13 @@ namespace StormByte::Logger {
 			void WriteValue(const T& v);
 
 			/**
-			 * @brief Deep-copy this facade into a @ref StormByte::Shared.
+				 * @brief Deep-copy this facade into a @ref StormByte::Safe::Shared.
 			 * @return Pointer to the clone.
 			 */
 			PointerType Clone() const override;
 
 			/**
-			 * @brief Move this facade into a @ref StormByte::Shared.
+				 * @brief Move this facade into a @ref StormByte::Safe::Shared.
 			 * @return Pointer to the new facade.
 			 */
 			PointerType Move() override;
@@ -851,8 +863,8 @@ namespace StormByte::Logger {
 	/**
 	 * @brief Pointer-like owner of `Log` or a derived logger.
 	 *
-	 * Matches `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Shared and
-	 * @ref StormByte::Unique, including a const owner captured by a lambda.
+		 * Matches `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Safe::Shared and
+		 * @ref StormByte::Safe::Unique, including a const owner captured by a lambda.
 	 * `Ptr` is deduced from `Ptr&`, so a const argument deduces a const pointer type.
 	 *
 	 * @tparam Ptr Pointer type.
@@ -864,7 +876,7 @@ namespace StormByte::Logger {
 
 	/**
 	 * @brief Stream a value into a smart pointer to Log or a derived logger.
-	 * @tparam Ptr `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Shared or @ref StormByte::Unique whose element type derives from Log.
+	 * @tparam Ptr `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Safe::Shared or @ref StormByte::Safe::Unique whose element type derives from Log.
 	 * @tparam T Value type.
 	 * @param logger Smart pointer to the logger. An empty owner is a no-op.
 	 * @param value Value to stream.
@@ -880,7 +892,7 @@ namespace StormByte::Logger {
 
 	/**
 	 * @brief Stream a Level into a smart pointer to Log or a derived logger.
-	 * @tparam Ptr `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Shared or @ref StormByte::Unique whose element type derives from Log.
+	 * @tparam Ptr `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Safe::Shared or @ref StormByte::Safe::Unique whose element type derives from Log.
 	 * @param logger Smart pointer to the logger. An empty owner is a no-op.
 	 * @param level Level to set.
 	 * @return Reference to the smart pointer.
@@ -898,7 +910,7 @@ namespace StormByte::Logger {
 	 *
 	 * A dedicated overload so overloaded manipulators such as `std::endl` can be resolved.
 	 *
-	 * @tparam Ptr `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Shared or @ref StormByte::Unique whose element type derives from Log.
+	 * @tparam Ptr `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Safe::Shared or @ref StormByte::Safe::Unique whose element type derives from Log.
 	 * @param logger Smart pointer to the logger. An empty owner is a no-op.
 	 * @param manip Stream manipulator.
 	 * @return Reference to the smart pointer.

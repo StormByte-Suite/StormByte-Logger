@@ -42,7 +42,7 @@
 
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/logger/visibility.h>
-#include <StormByte/string/string.hxx>
+#include <StormByte/safe/string.hxx>
 
 #include <cstddef>
 #include <optional>
@@ -73,9 +73,9 @@ namespace StormByte::Logger {
 	 * Component or Group selects the root/empty key.
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC ThrottleSpec {
-		std::optional<StormByte::String::String> Component; ///< Optional component selector.
+		std::optional<StormByte::Safe::String> Component; ///< Optional component selector.
 		std::optional<Level> Level;							///< Optional level selector.
-		std::optional<StormByte::String::String> Group;		///< Optional group selector.
+		std::optional<StormByte::Safe::String> Group;		///< Optional group selector.
 		double Rate = 0.0;									///< Lines per second; zero disables refill.
 		std::size_t Burst = 0;								///< Initial and maximum token capacity.
 		ThrottlePolicy Policy = ThrottlePolicy::Drop;		///< Count policy.
@@ -89,7 +89,7 @@ namespace StormByte::Logger {
 	 * @brief Labels the current logging line with a producer group.
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC GroupManip {
-		StormByte::String::String name; ///< Group name; an empty name clears the current group.
+		StormByte::Safe::String name; ///< Group name; an empty name clears the current group.
 	};
 
 	/**
@@ -97,7 +97,7 @@ namespace StormByte::Logger {
 	 * @param name Group name, or empty text to clear the group.
 	 * @return Group manipulator carrying the requested name.
 	 */
-	STORMBYTE_LOGGER_PUBLIC GroupManip group(StormByte::String::String name);
+	STORMBYTE_LOGGER_PUBLIC GroupManip group(StormByte::Safe::String name);
 
 	/**
 	 * @brief Set the producer group from caller-owned text.
@@ -105,7 +105,7 @@ namespace StormByte::Logger {
 	 * @return Group manipulator carrying the requested name.
 	 */
 	inline GroupManip group(std::string_view name) {
-		return group(StormByte::String::String{name});
+		return group(StormByte::Safe::String{name});
 	}
 
 	/**
@@ -117,7 +117,7 @@ namespace StormByte::Logger {
 	 * observe the same component; this is intentional for shared logger use.
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC ComponentManip {
-		StormByte::String::String name; ///< Component name; empty selects the root component.
+		StormByte::Safe::String name; ///< Component name; empty selects the root component.
 	};
 
 	/**
@@ -127,7 +127,7 @@ namespace StormByte::Logger {
 	 * @note An empty component is allowed for compatibility, but @ref reset_component
 	 *       is preferred when returning to the root component explicitly.
 	 */
-	STORMBYTE_LOGGER_PUBLIC ComponentManip component(StormByte::String::String name);
+	STORMBYTE_LOGGER_PUBLIC ComponentManip component(StormByte::Safe::String name);
 
 	/**
 	 * @brief Select the component from caller-owned text.
@@ -135,7 +135,7 @@ namespace StormByte::Logger {
 	 * @return Component manipulator carrying the requested name.
 	 */
 	inline ComponentManip component(std::string_view name) {
-		return component(StormByte::String::String{name});
+		return component(StormByte::Safe::String{name});
 	}
 
 	/**
@@ -171,7 +171,7 @@ namespace StormByte::Logger {
 	 * @brief Temporarily replaces the logger format and saves the previous one.
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC FormatManip {
-		StormByte::String::String format; ///< Temporary format, including an empty format if requested.
+		StormByte::Safe::String format; ///< Temporary format, including an empty format if requested.
 	};
 
 	/**
@@ -185,7 +185,7 @@ namespace StormByte::Logger {
 	 * @param format Format to activate until pop_format is streamed.
 	 * @return Format manipulator containing the requested format.
 	 */
-	STORMBYTE_LOGGER_PUBLIC FormatManip push_format(StormByte::String::String format);
+	STORMBYTE_LOGGER_PUBLIC FormatManip push_format(StormByte::Safe::String format);
 
 	/**
 	 * @brief Save the current format and activate a temporary format from caller-owned text.
@@ -193,7 +193,7 @@ namespace StormByte::Logger {
 	 * @return Format manipulator containing the requested format.
 	 */
 	inline FormatManip push_format(std::string_view format) {
-		return push_format(StormByte::String::String{format});
+		return push_format(StormByte::Safe::String{format});
 	}
 
 	/**

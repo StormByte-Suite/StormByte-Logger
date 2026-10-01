@@ -40,7 +40,7 @@
 
 #include <StormByte/logger/log.hxx>
 #include <StormByte/logger/threaded_log.hxx>
-#include <StormByte/string/string.hxx>
+#include <StormByte/safe/string.hxx>
 #include <StormByte/test_handlers.h>
 
 #include <atomic>
@@ -51,7 +51,7 @@
 #include <thread>
 #include <vector>
 
-using StormByte::String::String;
+using StormByte::Safe::String;
 using namespace StormByte::Logger;
 
 // -------------------

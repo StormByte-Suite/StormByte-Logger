@@ -150,7 +150,7 @@ namespace StormByte::Logger {
 			 * @brief Get the effective current header format.
 			 * @return Owned copy of the temporary, component-specific or general format.
 			 */
-			StormByte::String::String Format() const override;
+					StormByte::Safe::String Format() const override;
 
 			/**
 			 * @brief Set or remove a component-specific header format under the line lock.
@@ -165,7 +165,7 @@ namespace StormByte::Logger {
 			 * @param component Component path.
 			 * @return Owned copy of the component format or general format.
 			 */
-			StormByte::String::String Format(std::string_view component) const override;
+					StormByte::Safe::String Format(std::string_view component) const override;
 
 			/**
 			 * @brief Install a throttle rule under the line lock.
@@ -292,13 +292,13 @@ namespace StormByte::Logger {
 
 		protected:
 			/**
-			 * @brief Deep-copy this facade into a @ref StormByte::Shared.
+					 * @brief Deep-copy this facade into a @ref StormByte::Safe::Shared.
 			 * @return Pointer to a ThreadedLog that shares Engine and line lock.
 			 */
 			PointerType Clone() const override;
 
 			/**
-			 * @brief Move this facade into a @ref StormByte::Shared.
+					 * @brief Move this facade into a @ref StormByte::Safe::Shared.
 			 * @return Pointer to a ThreadedLog that shares Engine and line lock.
 			 */
 			PointerType Move() override;

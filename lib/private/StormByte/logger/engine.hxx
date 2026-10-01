@@ -46,8 +46,8 @@
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wstring.hxx>
 #include <StormByte/type_traits.hxx>
 
 #include <charconv>
@@ -464,16 +464,16 @@ namespace StormByte::Logger {
 				} else if constexpr (StormByte::Type::SameAs<DecayedT, const char*>) {
 					write_text(value ? std::string_view{value} : std::string_view{});
 				} else if constexpr (StormByte::Type::SameAs<DecayedT, std::wstring_view>) {
-					const StormByte::String::String encoded{StormByte::String::WString{value}};
+					const StormByte::Safe::String encoded{StormByte::Safe::WString{value}};
 					write_text(static_cast<std::string_view>(encoded));
 				} else if constexpr (StormByte::Type::SameAs<DecayedT, std::wstring>) {
-					const StormByte::String::String encoded{StormByte::String::WString{std::wstring_view{value}}};
+					const StormByte::Safe::String encoded{StormByte::Safe::WString{std::wstring_view{value}}};
 					write_text(static_cast<std::string_view>(encoded));
 				} else if constexpr (StormByte::Type::SameAs<DecayedT, const wchar_t*>) {
 					if (!value) {
 						write_text(std::string_view{});
 					} else {
-						const StormByte::String::String encoded{StormByte::String::WString{value}};
+						const StormByte::Safe::String encoded{StormByte::Safe::WString{value}};
 						write_text(static_cast<std::string_view>(encoded));
 					}
 				} else {

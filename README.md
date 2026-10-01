@@ -9,7 +9,7 @@
 
 This repository is **StormByte Logger**: stream logging for the StormByte C++ suite.
 
-It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::String::String` / `WString`, `StormByte::CString` / `WCString`, `StormByte::Size`).
+It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Safe::CString` / `WCString`, `StormByte::Size`).
 
 The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedia, Network and System are **other repositories**. This one does not implement them.
 
@@ -19,11 +19,11 @@ The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedi
 - **Levels** — ordered from least to most severe: `LowLevel`, `Debug`, `Warning`, `Notice`, `Info`, `Error`, `Fatal`. `Warning`, `Error` and `Fatal` are always emitted.
 - **Headers** — `%L` level, `%T` timestamp, `%i` thread id, `%c` component path, `%g` group, `%%` literal `%`.
 - **Components** — thread-local stack. `component("A")` pushes a segment; nested calls join with `/` (`Multimedia/Decoder`). `pop_component` pops one segment. `reset_component` clears the stack. `component("")` does not push.
-- **Scope** — `log.Scope("Multimedia/Decoder")` returns a `StormByte::Shared<Log>` facade with a sticky path. Nested `Scope("Encoder")` joins relative to the parent. Config methods without a component argument bind to that sticky path (root facade = global). The facade shares the backend and, on `ThreadedLog`, the line lock. `Shared` converts to `std::shared_ptr<Log>` and keeps Base's deleter.
+- **Scope** — `log.Scope("Multimedia/Decoder")` returns a `StormByte::Safe::Shared<Log>` facade with a sticky path. Nested `Scope("Encoder")` joins relative to the parent. Config methods without a component argument bind to that sticky path (root facade = global). The facade shares the backend and, on `ThreadedLog`, the line lock. `Safe::Shared` converts to `std::shared_ptr<Log>` and keeps Base's deleter.
 - **Groups** — line-scoped `group("name")` labels, cleared by a newline.
 - **Colors** — ANSI colors configured by level or component path (longest prefix wins). `color`, `color(Color::X)` and `nocolor` content manipulators. Disabled by default.
 - **Formats** — persistent general / component-path formats (longest prefix wins) plus nested temporary `push_format("...")` / `pop_format`.
-- **Human-readable** — `humanreadable_number`, `humanreadable_bytes`, `nohumanreadable`. Formatting lives in Logger (`Detail`); String no longer ships it.
+- **Human-readable** — `humanreadable_number`, `humanreadable_bytes`, `nohumanreadable`. Formatting lives in Logger (`Detail`).
 - **Redaction** — `redact` / `redact(N)` keep last N, `redact_first(N)` keep first N, `noredact`.
 - **Hex** — `hex` / `hex(N)` dumps text payloads as `0xAA` with N bytes per row (default 16). `nohex` restores the default. Applies to every subsequent text payload, including numbers (text bytes, not numeric hex). Binary payloads use `HexDump(N)` instead.
 - **Binary** — `std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::BinaryData` print as Base64 by default (`StormByte::Base64Encode` returns `CString`). With `hex(N)` the dump is `BinaryData::HexDump(N)`.
@@ -76,7 +76,7 @@ The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedi
 - This README: how to build, levels, headers, streaming contract, examples.
 - Doxygen class reference (headers under `StormByte/logger/`): [https://suite.stormbyte.org/StormByte-Logger/](https://suite.stormbyte.org/StormByte-Logger/).
 
-Other modules that take a `std::shared_ptr<StormByte::Logger::Log>` still compile: `Scope` returns `StormByte::Shared<Log>`, which converts to that `shared_ptr` and still frees on Base's heap. The print floor is chosen by the **application**, not by the library that logs.
+Other modules that take a `std::shared_ptr<StormByte::Logger::Log>` still compile: `Scope` returns `StormByte::Safe::Shared<Log>`, which converts to that `shared_ptr` and still frees on Base's heap. The print floor is chosen by the **application**, not by the library that logs.
 
 ## Levels
 
@@ -176,16 +176,16 @@ tlog << Level::Notice << "opened source /tmp/in.mkv" << std::endl;
 tlog << Level::Debug  << "mapped Video 0 -> order 0" << std::endl;
 ```
 
-`operator<<` unpacks `std::shared_ptr` / `std::unique_ptr` and `StormByte::Shared` / `StormByte::Unique` whose element type derives from `Log` (`Log` and `ThreadedLog`). `*tlog <<` still works, and so does `tlog <<` on those owners:
+`operator<<` unpacks `std::shared_ptr` / `std::unique_ptr` and `StormByte::Safe::Shared` / `StormByte::Safe::Unique` whose element type derives from `Log` (`Log` and `ThreadedLog`). `*tlog <<` still works, and so does `tlog <<` on those owners:
 
 ```cpp
-StormByte::Shared<ThreadedLog> log = StormByte::Shared<ThreadedLog>::MakePointer<ThreadedLog>(std::cout);
+StormByte::Safe::Shared<ThreadedLog> log = StormByte::Safe::Shared<ThreadedLog>::MakePointer<ThreadedLog>(std::cout);
 log << Level::Info << "Hola" << std::endl;
 ```
 
 `Log` and `ThreadedLog` accept any `std::ostream` (`std::cout`, a file stream, a string stream). The stream must outlive the logger. The DLL never calls into that stream: each write and each manipulator (`std::endl`, `std::flush`, …) jumps back to `OStreamWrite` / `OStreamManip`, which are compiled into the module that constructed the logger.
 
-Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::BinaryData`, `StormByte::String::String`, `StormByte::String::WString`, `StormByte::CString`, `StormByte::WCString`, `StormByte::Size`, `StormByte::ByteSize`. `std::string` and `std::wstring` convert to those views. `std::vector<std::byte>` converts to the span. There is no separate `operator<<(const std::string&)`. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned String type.
+Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::BinaryData`, `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Safe::CString`, `StormByte::Safe::WCString`, `StormByte::Size`, `StormByte::ByteSize`. The inline `std::string` overload passes a view during the call; Logger copies its bytes into the line buffer synchronously. `std::wstring` converts to the wide view. `std::vector<std::byte>` converts to the span. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned Base text type.
 
 ### A line
 
@@ -213,26 +213,26 @@ Demuxer demux(log);
 Muxer   mux(log, container);
 ```
 
-The objects store `StormByte::Shared<Log>` (or a `std::shared_ptr<Log>` converted from it). `ThreadedLog` *is-a* `Log`, so the same pointer type works. `Scope` facades also share that backend.
+The objects store `StormByte::Safe::Shared<Log>` (or a `std::shared_ptr<Log>` converted from it). `ThreadedLog` *is-a* `Log`, so the same pointer type works. `Scope` facades also share that backend.
 
 ### Owned text and Size
 
-Text that is owned by another module, or that must remain valid after returning across a DLL / `.so`, is `String` / `WString` / `CString` / `WCString`. Do not put `std::string` in objects that cross that boundary.
+Text that is owned by another module, or that must remain valid after returning across a DLL / `.so`, is `StormByte::Safe::String` / `WString` / `CString` / `WCString`. Do not put `std::string` in objects that cross that boundary.
 
-`String` has an implicit inline `string_view` in the **caller**. That view points at the other module's buffer. Logger still provides an explicit `operator<<(const String&)` so the copy into the line happens on this side after `WillWrite()`.
+`Safe::String` has an implicit inline `string_view` in the **caller**. That view points at the other module's buffer. Logger provides an explicit `operator<<(const Safe::String&)` so the copy into the line happens on this side after `WillWrite()`.
 
 ```cpp
-#include <StormByte/cstring.hxx>
+#include <StormByte/safe/cstring.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
-#include <StormByte/wcstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wcstring.hxx>
+#include <StormByte/safe/wstring.hxx>
 
-using StormByte::CString;
+using StormByte::Safe::CString;
 using StormByte::Size;
-using StormByte::WCString;
-using StormByte::String::String;
-using StormByte::String::WString;
+using StormByte::Safe::WCString;
+using StormByte::Safe::String;
+using StormByte::Safe::WString;
 
 log << Level::Info << String{"owned utf-8"} << std::endl;
 log << Level::Info << CString{"owned cstring"} << std::endl;
@@ -240,7 +240,7 @@ log << Level::Info << WString{L"wide"} << std::endl;
 log << Level::Info << Size{1024} << std::endl;
 
 if (!log.Enabled(Level::Debug)) {
-	// String / WString are not converted here: the overload returns before ToStd.
+  // Safe::String / WString are not converted here: the overload returns before ToStd.
 	log << Level::Debug << WString{L"dropped"} << std::endl;
 }
 ```
@@ -445,12 +445,12 @@ match, the longer component string wins.
 it is always visible with respect to the print floor.
 
 `ThrottleSpec::Component` and `ThrottleSpec::Group` are
-`std::optional<StormByte::String::String>`. Assigning a literal still works
-where `String` can be constructed from it.
+`std::optional<StormByte::Safe::String>`. Assigning a literal still works
+where `Safe::String` can be constructed from it.
 
 ```cpp
 ThrottleSpec spec;
-spec.Component = String{"Multimedia/Decoder"};
+spec.Component = StormByte::Safe::String{"Multimedia/Decoder"};
 spec.Level = Level::LowLevel;
 spec.Policy = ThrottlePolicy::Window;
 spec.WindowKeep = 20;

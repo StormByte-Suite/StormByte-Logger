@@ -41,15 +41,15 @@
 #include <StormByte/base64.hxx>
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
-#include <StormByte/cstring.hxx>
+#include <StormByte/safe/cstring.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/log.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wcstring.hxx>
+#include <StormByte/safe/wstring.hxx>
 #include <StormByte/test_handlers.h>
-#include <StormByte/wcstring.hxx>
 
 #include <clocale>
 #include <iostream>
@@ -62,11 +62,11 @@
 
 using StormByte::BinaryData;
 using StormByte::ByteSize;
-using StormByte::CString;
+using StormByte::Safe::CString;
 using StormByte::Size;
-using StormByte::WCString;
-using StormByte::String::String;
-using StormByte::String::WString;
+using StormByte::Safe::WCString;
+using StormByte::Safe::String;
+using StormByte::Safe::WString;
 using namespace StormByte::Logger;
 
 namespace {
@@ -824,6 +824,8 @@ int test_every_accepted_payload() {
 	const float fl = 1.5f;
 	const long double ld = 2.5L;
 	char mutable_text[] = "buf";
+	const std::string narrow_text{"std"};
+	const char* literal_text = "literal";
 	const char* null_narrow = nullptr;
 	const wchar_t* null_wide = nullptr;
 	log << Level::Info
@@ -832,7 +834,7 @@ int test_every_accepted_payload() {
 		<< sh << " " << ush << " " << ui << " "
 		<< lg << " " << ul << " " << ll << " " << ull << " "
 		<< fl << " " << ld << " "
-		<< mutable_text << " "
+		<< mutable_text << " " << narrow_text << " " << literal_text << " "
 		<< null_narrow << null_wide
 		<< std::endl;
 	const std::string body =
@@ -849,7 +851,7 @@ int test_every_accepted_payload() {
 		+ std::to_string(ull) + ' '
 		+ std::to_string(fl) + ' '
 		+ std::to_string(ld)
-		+ " buf ";
+		+ " buf std literal ";
 	ASSERT_EQUAL("test_every_accepted_payload", std::string("Info    : ") + body + "\n", output.str());
 	RETURN_TEST("test_every_accepted_payload", result);
 }
@@ -857,8 +859,8 @@ int test_every_accepted_payload() {
 int test_pointer_owners_stream() {
 	int result = 0;
 	std::ostringstream output;
-	StormByte::Shared<Log> empty_shared;
-	StormByte::Unique<Log> empty_unique;
+	StormByte::Safe::Shared<Log> empty_shared;
+	StormByte::Safe::Unique<Log> empty_unique;
 	std::shared_ptr<Log> empty_std_shared;
 	std::unique_ptr<Log> empty_std_unique;
 	empty_shared << Level::Info << "skip" << std::endl;
@@ -866,10 +868,10 @@ int test_pointer_owners_stream() {
 	empty_std_shared << Level::Info << "skip" << std::endl;
 	empty_std_unique << Level::Info << "skip" << std::endl;
 
-	auto shared = StormByte::Shared<Log>::MakePointer<Log>(output, Level::Info, "%L:");
+	auto shared = StormByte::Safe::Shared<Log>::MakePointer<Log>(output, Level::Info, "%L:");
 	IsolateLine(*shared);
 	shared << Level::Info << "shared" << std::endl;
-	auto unique = StormByte::Unique<Log>::MakePointer<Log>(output, Level::Info, "%L:");
+	auto unique = StormByte::Safe::Unique<Log>::MakePointer<Log>(output, Level::Info, "%L:");
 	IsolateLine(*unique);
 	unique << Level::Info << "unique" << std::endl;
 	ASSERT_EQUAL("test_pointer_owners_stream", "Info    : shared\nInfo    : unique\n", output.str());

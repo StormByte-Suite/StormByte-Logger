@@ -41,9 +41,9 @@
 #include <StormByte/base64.hxx>
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
-#include <StormByte/cstring.hxx>
+#include <StormByte/safe/cstring.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/string/string.hxx>
+#include <StormByte/safe/string.hxx>
 #include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/test_handlers.h>
 
@@ -85,7 +85,7 @@ int test_smart_pointer_usage() {
 int test_shared_unwraps_without_dereference() {
 	int result = 0;
 	std::ostringstream output;
-	StormByte::Shared<ThreadedLog> log = StormByte::Shared<ThreadedLog>::MakePointer<ThreadedLog>(output, Level::Info, "%L:");
+	StormByte::Safe::Shared<ThreadedLog> log = StormByte::Safe::Shared<ThreadedLog>::MakePointer<ThreadedLog>(output, Level::Info, "%L:");
 	log << Level::Info << "Hola" << std::endl;
 	ASSERT_EQUAL("test_shared_unwraps_without_dereference", "Info    : Hola\n", output.str());
 	RETURN_TEST("test_shared_unwraps_without_dereference", result);
@@ -156,8 +156,12 @@ int test_threadedlog_every_accepted_payload() {
 	int result = 0;
 	std::ostringstream output;
 	ThreadedLog log(output, Level::Info, "%L:");
-	const StormByte::String::String owned{"owned"};
-	const StormByte::CString bytes{"c"};
+	const StormByte::Safe::String owned{"owned"};
+	const StormByte::Safe::CString bytes{"c"};
+	const StormByte::Safe::WString wide_owned{L"wide-owned"};
+	const StormByte::Safe::WCString wide_bytes{L"wide-c"};
+	const std::string narrow_text{"string"};
+	const char* literal_text = "literal";
 	const StormByte::Size count{3};
 	const StormByte::ByteSize octets{4};
 	const StormByte::BinaryData raw{std::byte{'Z'}};
@@ -165,16 +169,20 @@ int test_threadedlog_every_accepted_payload() {
 	log << Level::Info
 		<< false << " "
 		<< std::string_view{"std"} << " "
+		<< narrow_text << " "
+		<< literal_text << " "
 		<< std::wstring_view{L"wide"} << " "
 		<< owned << " "
 		<< bytes << " "
+		<< wide_owned << " "
+		<< wide_bytes << " "
 		<< count << " "
 		<< octets << " "
 		<< raw
 		<< null_narrow
 		<< std::endl;
 	const std::string body =
-		std::string("false std wide owned c ")
+		std::string("false std string literal wide owned c wide-owned wide-c ")
 		+ static_cast<std::string>(count) + ' '
 		+ static_cast<std::string>(octets) + ' '
 		+ static_cast<std::string>(StormByte::Base64Encode(raw));

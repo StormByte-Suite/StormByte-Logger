@@ -40,8 +40,8 @@
 
 #include <StormByte/logger/engine.hxx>
 #include <StormByte/logger/threaded_log.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wstring.hxx>
 
 #include <sstream>
 #include <utility>
@@ -141,7 +141,7 @@ Log& ThreadedLog::Format(std::string_view format) {
 	return *this;
 }
 
-StormByte::String::String ThreadedLog::Format() const {
+StormByte::Safe::String ThreadedLog::Format() const {
 	return Log::Format();
 }
 
@@ -160,7 +160,7 @@ Log& ThreadedLog::Format(std::string_view component, std::string_view format) {
 	return *this;
 }
 
-StormByte::String::String ThreadedLog::Format(std::string_view component) const {
+StormByte::Safe::String ThreadedLog::Format(std::string_view component) const {
 	return Log::Format(component);
 }
 
@@ -237,7 +237,7 @@ Log& ThreadedLog::FlushThrottle(const ThrottleSpec& spec) {
 void ThreadedLog::Write(std::wstring_view v) {
 	if (!WillWrite() || !PrepareLine())
 		return;
-	const StormByte::String::String encoded{StormByte::String::WString{v}};
+	const StormByte::Safe::String encoded{StormByte::Safe::WString{v}};
 	claim_line(m_lock);
 	Log::WriteValue(static_cast<std::string_view>(encoded));
 }
@@ -250,7 +250,7 @@ void ThreadedLog::Write(const wchar_t* v) {
 		Log::WriteValue(std::string_view{});
 		return;
 	}
-	const StormByte::String::String encoded{StormByte::String::WString{v}};
+	const StormByte::Safe::String encoded{StormByte::Safe::WString{v}};
 	claim_line(m_lock);
 	Log::WriteValue(static_cast<std::string_view>(encoded));
 }

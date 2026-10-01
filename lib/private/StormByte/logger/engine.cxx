@@ -41,8 +41,8 @@
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/engine.hxx>
 #include <StormByte/logger/manipulators.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wstring.hxx>
 
 #include <algorithm>
 #include <chrono>
@@ -79,11 +79,11 @@ namespace {
 
 	thread_local LineState t_line;
 
-	std::string ToStd(const StormByte::String::String& text) {
+	std::string ToStd(const StormByte::Safe::String& text) {
 		return static_cast<std::string>(text);
 	}
 
-	std::string ToStdOrEmpty(const std::optional<StormByte::String::String>& text) {
+	std::string ToStdOrEmpty(const std::optional<StormByte::Safe::String>& text) {
 		return text ? ToStd(*text) : std::string{};
 	}
 
@@ -858,7 +858,7 @@ void Engine::print_message(const std::string& message) noexcept {
 
 void Engine::print_message(const wchar_t& value) {
 	const wchar_t raw[1] = { value };
-	const StormByte::String::String encoded{StormByte::String::WString{std::wstring_view{raw, 1}}};
+	const StormByte::Safe::String encoded{StormByte::Safe::WString{std::wstring_view{raw, 1}}};
 	print_message(ToStd(encoded));
 }
 

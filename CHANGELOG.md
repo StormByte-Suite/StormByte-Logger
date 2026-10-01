@@ -11,7 +11,7 @@ StormByte Logger is the stream-logging module of the StormByte C++ suite.
 
 It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
 
-Public headers under `StormByte/logger/` cover `Log`, `ThreadedLog`, header formats (`%L` `%T` `%i` `%c` `%g`), hierarchical components and `Scope` facades, groups, ANSI colors, temporary formats, human-readable numbers and bytes, redaction of text and numbers, hex dumps (`hex` / `nohex`), and binary payloads (`std::span<const std::byte>`, default Base64). Owned text that crosses the logger DLL boundary uses `StormByte::String::String` / `WString` and `StormByte::CString` / `WCString`; `StormByte::Size`, `StormByte::ByteSize` and `StormByte::BinaryData` are accepted as payloads. Views and `std::string` stay on the caller side.
+Public headers under `StormByte/logger/` cover `Log`, `ThreadedLog`, header formats (`%L` `%T` `%i` `%c` `%g`), hierarchical components and `Scope` facades, groups, ANSI colors, temporary formats, human-readable numbers and bytes, redaction of text and numbers, hex dumps (`hex` / `nohex`), and binary payloads (`std::span<const std::byte>`, default Base64). Owned text that crosses the logger DLL boundary uses `StormByte::Safe::String` / `WString` and `StormByte::Safe::CString` / `WCString`; `StormByte::Size`, `StormByte::ByteSize` and `StormByte::BinaryData` are accepted as payloads. Views and caller-owned `std::string` are consumed synchronously.
 
 From 2.0.0, original Logger sources are dual-licensed: GNU Lesser General Public License v3.0 or later, or a commercial license from the copyright holder. That change does not cover other StormByte modules or third-party material under `thirdparty/` (including bundled StormByte Base).
 
@@ -24,37 +24,37 @@ If you landed here from a release link and have not read the tree:
 
 [Unreleased]: https://github.com/StormBytePP/StormByte-Logger/compare/2.0.0...HEAD
 
-## [2.0.0] - 2026-09-29
+## [2.0.0] - 2026-10-01
 
 ### Added
 
-- `operator<<` on `Log` and `ThreadedLog` for `StormByte::String::String`, `StormByte::String::WString`, `StormByte::CString`, `StormByte::WCString` and `StormByte::Size`. Conversion and copy run only when `WillWrite()` is true.
-- `component`, `group` and `push_format` accept `std::string_view` (literals) in the caller and `StormByte::String::String` by value at the DLL boundary. Manipulator payloads are owned `String`.
+- `operator<<` on `Log` and `ThreadedLog` for `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Safe::CString`, `StormByte::Safe::WCString` and `StormByte::Size`. Conversion and copy run only when `WillWrite()` is true.
+- `component`, `group` and `push_format` accept `std::string_view` (literals) in the caller and `StormByte::Safe::String` by value at the DLL boundary. Manipulator payloads use Base-owned text.
 - Private `StormByte::Logger::Detail` human-readable number and IEC byte formatting (the manipulator API is unchanged; this logic no longer lives in String).
 - Tests for owned-text payloads, filtered drop of owned text, `Size`, and ill-formed wide input substituted as U+FFFD.
 - `operator<<` for `StormByte::BinaryData` and `StormByte::ByteSize` on `Log` and `ThreadedLog`. Conversion runs only when `WillWrite()` is true.
-- `operator<<` on `StormByte::Shared` and `StormByte::Unique` of `Log` or `ThreadedLog`, same sugar as `std::shared_ptr`: `log << "Hola"` without a dereference.
+- `operator<<` on `StormByte::Safe::Shared` and `StormByte::Safe::Unique` of `Log` or `ThreadedLog`, same sugar as `std::shared_ptr`: `log << "Hola"` without a dereference.
 - `~Log` and `~ThreadedLog` are defined in the library, so the backend and the line lock are released inside the DLL. Copy and move assignment are too.
 
 ### Changed
 
-- Build metadata now vendors StormByte Base directly instead of StormByte-String; the Logger text API migration is deferred to a follow-up change.
+- Logger's text API and build metadata now use StormByte Base 2.0.0 directly; owned text and clone owners use Base's `StormByte::Safe` types.
 - Shared vs static follows CMake `BUILD_SHARED_LIBS` (declared in the project root, default ON). There is no `STORMBYTE_LOGGER_SHARED` CMake option. When the library is shared, the compile definition `STORMBYTE_LOGGER_SHARED` is still set so `visibility.h` can distinguish `dllexport` / `dllimport` / static. CI passes `-DBUILD_SHARED_LIBS=ON`. Vendored StormByte Base follows the same `BUILD_SHARED_LIBS` mode.
-- **Breaking:** Logger vendors [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) directly. Migration of Logger's existing text API from StormByte-String is deferred to a follow-up change.
-- **Breaking:** public streaming no longer treats `std::string` as an owned cross-module type. Use `String` / `CString` when the buffer is owned by another module; `string_view` remains valid for caller-owned data.
+- **Breaking:** Logger vendors [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) directly and exposes Base's `StormByte::Safe` owned-text and ownership types in its public API.
+- **Breaking:** public streaming no longer treats `std::string` as an owned cross-module type. Use `StormByte::Safe::String` / `StormByte::Safe::CString` when the buffer is owned by another module; `string_view` remains valid for caller-owned data. A caller-owned `std::string` is streamed inline as a view and copied synchronously.
 - `LevelToString` returns `const char*` (a string literal) instead of `std::string`. Call sites that store it in a `std::string` are unchanged.
 - The private backend is `Engine` (`m_engine`), in `engine.hxx` / `engine.cxx`. It was `Implementation`.
 - Filtered payloads (`WillWrite()` false) return before any conversion or copy. A filtered or throttled `std::endl` does not touch the stream. An emitted line still forwards real `std::endl`, so the text is flushed at that instant and the next payload prints a new header. `std::endl` / `std::flush` / `std::ends` are recognized without probing a string stream.
 - **Breaking (boundary):** `Log` and `ThreadedLog` no longer write an `std::ostream` from inside the DLL. Construction from an `std::ostream` still works and still requires the stream to outlive the logger. Bytes and manipulators (`std::endl`) are applied by `OStreamWrite` / `OStreamManip` in the module that constructed the logger. A protected constructor takes those callbacks directly.
-- **Breaking:** `ThrottleSpec::Component` and `ThrottleSpec::Group` are `std::optional<StormByte::String::String>`.
+- **Breaking:** `ThrottleSpec::Component` and `ThrottleSpec::Group` are `std::optional<StormByte::Safe::String>`.
 - **Breaking:** ill-formed wide text is written as U+FFFD (`EF BF BD`). Logger does not throw `StormByte::UTF8Error` on that path.
-- `Log::m_scope_path` is `StormByte::String::String` so a copied or derived `Log` does not carry `std::string` across a DLL boundary.
+- `Log::m_scope_path` is `StormByte::Safe::String` so a copied or derived `Log` does not carry `std::string` across a DLL boundary.
 - Numeric and narrow-text payloads share `Log::WriteValue`; `ThreadedLog` only overrides `BeginPayload` for those payloads.
-- `StormByte::Base64Encode` returns `CString` (Base 2.0.0). Binary-span default output is unchanged for the reader.
+- `StormByte::Base64Encode` returns `StormByte::Safe::CString` (Base 2.0.0). Binary-span default output is unchanged for the reader.
 - **License:** original Logger sources are dual-licensed LGPL-3.0-or-later or commercial. Third-party trees under `thirdparty/` keep their own licenses. Neither license grants patent rights.
 - **Breaking:** with `hex(N)` active, `std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::BinaryData` are formatted with `BinaryData::HexDump(N)`. Text, wide text and numbers still use the `0xAA` dump. Without `hex`, binary payloads stay Base64.
 - **Breaking:** `Logger::Exception` takes `Exception::Path{"Logger"}`. `what()` is `StormByte.Logger: message`. `Component` is gone. `ThrottleError` is a leaf and adds no segment. Destructors are defined in this module.
-- **Breaking:** `Log` is `Clonable<Log>`, so `Clone`, `Move` and `Scope` return `StormByte::Shared<Log>` allocated on Base's heap. `std::shared_ptr<Log>` is no longer a `PointerType`. `Shared` still converts to `std::shared_ptr<Log>` and keeps Base's deleter. The same applies to `ThreadedLog`.
+- **Breaking:** `Log` is `StormByte::Safe::Clonable<Log>`, so `Clone`, `Move` and `Scope` return `StormByte::Safe::Shared<Log>` allocated on Base's heap. `std::shared_ptr<Log>` is no longer a `PointerType`. `Safe::Shared` still converts to `std::shared_ptr<Log>` and keeps Base's deleter. The same applies to `ThreadedLog`.
 
 [2.0.0]: https://github.com/StormBytePP/StormByte-Logger/compare/1.2.0...2.0.0
 

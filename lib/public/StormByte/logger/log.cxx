@@ -40,7 +40,7 @@
 
 #include <StormByte/logger/engine.hxx>
 #include <StormByte/logger/log.hxx>
-#include <StormByte/string/string.hxx>
+#include <StormByte/safe/string.hxx>
 
 #include <string>
 #include <utility>
@@ -75,31 +75,31 @@ namespace {
 		return level == Level::Warning || level == Level::Error || level == Level::Fatal;
 	}
 
-	std::string Native(const StormByte::String::String& text) {
+	std::string Native(const StormByte::Safe::String& text) {
 		return std::string{static_cast<std::string_view>(text)};
 	}
 
-	StormByte::String::String JoinPath(const StormByte::String::String& base, std::string_view add) {
+	StormByte::Safe::String JoinPath(const StormByte::Safe::String& base, std::string_view add) {
 		const std::string_view left = static_cast<std::string_view>(base);
 		if (add.empty())
 			return base;
 		if (left.empty())
-			return StormByte::String::String{add};
+			return StormByte::Safe::String{add};
 		std::string out;
 		out.reserve(left.size() + 1 + add.size());
 		out.append(left);
 		out.push_back('/');
 		out.append(add);
-		return StormByte::String::String{std::string_view{out}};
+		return StormByte::Safe::String{std::string_view{out}};
 	}
 
-	void BindStickyComponent(ThrottleSpec& spec, const StormByte::String::String& path) {
+	void BindStickyComponent(ThrottleSpec& spec, const StormByte::Safe::String& path) {
 		if (!spec.Component && !static_cast<std::string_view>(path).empty())
 			spec.Component = path;
 	}
 
-	StormByte::String::String CopyFormat(const std::string& format) {
-		return StormByte::String::String{std::string_view{format}};
+	StormByte::Safe::String CopyFormat(const std::string& format) {
+		return StormByte::Safe::String{std::string_view{format}};
 	}
 }
 
@@ -212,7 +212,7 @@ Log& Log::Format(std::string_view format) {
 	return *this;
 }
 
-StormByte::String::String Log::Format() const {
+StormByte::Safe::String Log::Format() const {
 	if (static_cast<std::string_view>(m_scope_path).empty())
 		return CopyFormat(m_engine->Format());
 	return CopyFormat(static_cast<const Engine&>(*m_engine).Format(Native(m_scope_path)));
@@ -223,7 +223,7 @@ Log& Log::Format(std::string_view component, std::string_view format) {
 	return *this;
 }
 
-StormByte::String::String Log::Format(std::string_view component) const {
+StormByte::Safe::String Log::Format(std::string_view component) const {
 	return CopyFormat(static_cast<const Engine&>(*m_engine).Format(std::string{component}));
 }
 

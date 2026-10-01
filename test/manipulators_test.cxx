@@ -38,24 +38,24 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
-#include <StormByte/cstring.hxx>
+#include <StormByte/safe/cstring.hxx>
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/log.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/threaded_log.hxx>
-#include <StormByte/string/string.hxx>
-#include <StormByte/string/wstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wcstring.hxx>
+#include <StormByte/safe/wstring.hxx>
 #include <StormByte/test_handlers.h>
-#include <StormByte/wcstring.hxx>
 
 #include <iostream>
 #include <sstream>
 #include <string>
 
-using StormByte::CString;
-using StormByte::WCString;
-using StormByte::String::String;
-using StormByte::String::WString;
+using StormByte::Safe::CString;
+using StormByte::Safe::WCString;
+using StormByte::Safe::String;
+using StormByte::Safe::WString;
 using namespace StormByte::Logger;
 
 // -------------------
