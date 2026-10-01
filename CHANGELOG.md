@@ -24,7 +24,7 @@ If you landed here from a release link and have not read the tree:
 
 [Unreleased]: https://github.com/StormBytePP/StormByte-Logger/compare/2.0.0...HEAD
 
-## [2.0.0] - 2026-10-01
+## [2.0.0] - 2026-10-02
 
 ### Added
 
