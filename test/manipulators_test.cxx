@@ -464,6 +464,13 @@ int test_manip_redact_wstring_owned() {
 // Throttle
 // -------------------
 
+int test_manip_throttle_level_selector() {
+	int result = 0;
+	ThrottleSpec spec{.Component = std::nullopt, .Level = Level::Info, .Group = std::nullopt};
+	ASSERT_TRUE("test_manip_throttle_level_selector", spec.Level == Level::Info);
+	RETURN_TEST("test_manip_throttle_level_selector", result);
+}
+
 int test_manip_throttle_invalid_configuration() {
 	int result = 0;
 	std::ostringstream output;
@@ -580,6 +587,7 @@ int main() {
 	// -------------------
 	// Throttle
 	// -------------------
+	result += test_manip_throttle_level_selector();
 	result += test_manip_throttle_invalid_configuration();
 	result += test_manip_throttle_policies_log();
 	result += test_manip_throttle_threadedlog();

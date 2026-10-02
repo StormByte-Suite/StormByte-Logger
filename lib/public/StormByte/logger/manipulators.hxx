@@ -74,7 +74,7 @@ namespace StormByte::Logger {
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC ThrottleSpec {
 		std::optional<StormByte::Safe::String> Component; ///< Optional component selector.
-		std::optional<Level> Level;							///< Optional level selector.
+		std::optional<StormByte::Logger::Level> Level; ///< Optional level selector.
 		std::optional<StormByte::Safe::String> Group;		///< Optional group selector.
 		double Rate = 0.0;									///< Lines per second; zero disables refill.
 		std::size_t Burst = 0;								///< Initial and maximum token capacity.

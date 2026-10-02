@@ -22,6 +22,10 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+### Fixed
+
+- Qualify the `ThrottleSpec::Level` member type so public headers compile with GCC 14+ without `-Wchanges-meaning`; the `Level` field and designated-initializer API remain unchanged.
+
 [Unreleased]: https://github.com/StormBytePP/StormByte-Logger/compare/2.0.0...HEAD
 
 ## [2.0.0] - 2026-10-02
