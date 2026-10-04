@@ -20,14 +20,11 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte-Logger/blob/master/README.md)
 - License: dual license LGPL-3.0-or-later or commercial, [LICENSE](https://github.com/StormBytePP/StormByte-Logger/blob/master/LICENSE)
 
-## [Unreleased]
-
-[Unreleased]: https://github.com/StormBytePP/StormByte-Logger/compare/2.0.0...HEAD
-
 ## [2.0.0] - 2026-10-04
 
 ### Added
 
+- `operator<<` for `StormByte::Safe::Optional`, `StormByte::Safe::Vector` and `StormByte::Safe::Map`, with recursive values, explicit empty-option text, bracketed vectors and ordered multiline maps.
 - `SinkFunction`, a `StormByte::Safe::Function` sink for `Log` and `ThreadedLog`; its callback context is released in the creator module.
 - `operator<<` on `Log` and `ThreadedLog` for `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Safe::CString`, `StormByte::Safe::WCString` and `StormByte::Size`. Conversion and copy run only when `WillWrite()` is true.
 - `component`, `group` and `push_format` accept `std::string_view` (literals) in the caller and `StormByte::Safe::String` by value at the DLL boundary. Manipulator payloads use Base-owned text.
@@ -39,6 +36,8 @@ If you landed here from a release link and have not read the tree:
 
 ### Changed
 
+- `ThreadedLog` tracks each concrete line lock independently per thread, so nested writes through separate logger instances cannot bypass one another's mutex.
+- Message construction and numeric-format fallback failures are contained within `noexcept` output paths instead of terminating the process.
 - Public optional fields in `ThrottleSpec` and `ColorManip` use `StormByte::Safe::Optional`; public logger facades and manipulators declare their conditional DLL-safety with `MaybeSafe`.
 - `ThreadedLog` serializes configuration queries and updates with its shared line lock. Failures release the lock, preserve StormByte exceptions and translate foreign exceptions to `Logger::Exception`.
 - Caller sinks are contained in `noexcept` output paths; typed callback sinks also receive header separator bytes.
@@ -62,6 +61,9 @@ If you landed here from a release link and have not read the tree:
 
 ### Fixed
 
+- Contain non-standard callback failures at the Safe::Function boundary; verify both StormByte and foreign callback failures can be followed by a successful line and creator-side context release.
+- Preserve literal output for unknown or incomplete header-format tokens, and keep lock ownership intact when one ThreadedLog writes through another instance.
+- Compare `BinaryData` output with equivalent byte-vector output and cover Safe optional/vector/map representations on both logger facades.
 - Prevent a sink callback failure from terminating the process through a `noexcept` write path, and prevent `ThreadedLog` configuration failures from leaving the line lock held.
 - Qualify the `ThrottleSpec::Level` member type so public headers compile with GCC 14+ without `-Wchanges-meaning`; the `Level` field and designated-initializer API remain unchanged.
 

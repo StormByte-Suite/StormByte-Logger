@@ -42,8 +42,11 @@
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
 #include <StormByte/safe/cstring.hxx>
+#include <StormByte/safe/map.hxx>
+#include <StormByte/safe/optional.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
+#include <StormByte/safe/vector.hxx>
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/test_handlers.h>
@@ -52,18 +55,23 @@
 #include <chrono>
 #include <future>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <optional>
 #include <regex>
 #include <span>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
 
 using namespace StormByte::Logger;
+using StormByte::Safe::String;
 
 static_assert(StormByte::Type::MaybeSafe<ThrottleSpec>);
+static_assert(StormByte::Type::MaybeSafe<Log>);
 static_assert(StormByte::Type::MaybeSafe<GroupManip>);
 static_assert(StormByte::Type::MaybeSafe<ComponentManip>);
 static_assert(StormByte::Type::MaybeSafe<FormatManip>);
@@ -72,14 +80,52 @@ static_assert(StormByte::Type::MaybeSafe<ThreadedLog>);
 static_assert(StormByte::Type::MaybeSafe<StormByte::Logger::Exception>);
 static_assert(StormByte::Type::MaybeSafe<StormByte::Logger::ThrottleError>);
 static_assert(StormByte::Type::MaybeSafe<SinkFunction>);
+static_assert(!StormByte::Type::IsSafe<SinkFunction>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::BinaryData>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::String>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::WString>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::CString>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::WCString>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::Safe::Optional<Level>>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::Vector<StormByte::Safe::String>>::value);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::Map<StormByte::Safe::String, StormByte::Safe::String>>::value);
 
 namespace {
+	std::ostream& WriteNewlineThenThrow(std::ostream& output) {
+		output.put('\n');
+		throw std::runtime_error("stream manipulator failure");
+	}
+
 	struct SinkFunctionContext {
 		std::string* output;
 		int* releases;
 		bool fail_once;
+		bool fail_foreign_once = false;
 	};
+
+	struct CrossLoggerLockContext {
+		std::promise<void> first_call;
+		std::promise<void> concurrent_call;
+		std::shared_future<void> release_first;
+		std::atomic<bool> first_seen{false};
+		std::atomic<bool> concurrent_seen{false};
+		std::atomic<int> active{0};
+	};
+
+	StormByte::Safe::Status BlockFirstSinkCall(void* context, const StormByte::Safe::String&) {
+		auto& sink = *static_cast<CrossLoggerLockContext*>(context);
+		if (sink.active.fetch_add(1, std::memory_order_acq_rel) != 0 &&
+			!sink.concurrent_seen.exchange(true, std::memory_order_acq_rel))
+			sink.concurrent_call.set_value();
+		if (!sink.first_seen.exchange(true, std::memory_order_acq_rel)) {
+			sink.first_call.set_value();
+			sink.release_first.wait();
+		}
+		sink.active.fetch_sub(1, std::memory_order_release);
+		return StormByte::Safe::Status::Success;
+	}
+
+	void ReleaseCrossLoggerContext(void*) noexcept {}
 
 	StormByte::Safe::Status CaptureSinkFunction(void* context, const StormByte::Safe::String& text) {
 		auto& sink = *static_cast<SinkFunctionContext*>(context);
@@ -87,6 +133,10 @@ namespace {
 		if (sink.fail_once && view == "failure") {
 			sink.fail_once = false;
 			throw StormByte::Logger::Exception("sink failure");
+		}
+		if (sink.fail_foreign_once && view == "foreign") {
+			sink.fail_foreign_once = false;
+			throw std::runtime_error("foreign sink failure");
 		}
 		sink.output->append(view);
 		return StormByte::Safe::Status::Success;
@@ -141,19 +191,65 @@ int test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_con
 	int releases = 0;
 	{
 		SinkFunction callback{
-			new SinkFunctionContext{&output, &releases, true},
+			new SinkFunctionContext{&output, &releases, true, true},
 			&CaptureSinkFunction,
 			&ReleaseSinkFunction
 		};
 		ThreadedLog log(std::move(callback), Level::Info, "%L:");
 		log << Level::Info << "failure" << std::endl;
+		log << Level::Info << "foreign" << std::endl;
 		std::thread next([&] { log << Level::Info << "after" << std::endl; });
 		next.join();
 	}
 	ASSERT_EQUAL("test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues",
-		"Info    : \nInfo    : after\n", output);
+		"Info    : \nInfo    : \nInfo    : after\n", output);
 	ASSERT_EQUAL("test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues (release)", 1, releases);
 	RETURN_TEST("test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues", result);
+}
+
+int test_threadedlog_nested_instances_keep_distinct_locks() {
+	int result = 0;
+	std::ostringstream first_output;
+	ThreadedLog first(first_output, Level::Info, "%L:");
+	CrossLoggerLockContext context;
+	std::promise<void> release_first;
+	context.release_first = release_first.get_future().share();
+	auto first_call = context.first_call.get_future();
+	auto concurrent_call = context.concurrent_call.get_future();
+	SinkFunction callback{&context, &BlockFirstSinkCall, &ReleaseCrossLoggerContext};
+	ThreadedLog second(std::move(callback), Level::Info, "%L:");
+	std::thread owner([&] {
+		first << Level::Info << "held";
+		second << Level::Info << "blocked sink" << std::endl;
+		first << std::endl;
+		first << Level::Info << "cleanup" << std::endl;
+	});
+	const bool entered_sink = first_call.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+	std::thread contender;
+	bool overlapped = false;
+	if (entered_sink) {
+		contender = std::thread([&] { second << Level::Info << "contender" << std::endl; });
+		overlapped = concurrent_call.wait_for(std::chrono::milliseconds(200)) == std::future_status::ready;
+	}
+	release_first.set_value();
+	owner.join();
+	if (contender.joinable())
+		contender.join();
+	ASSERT_TRUE("test_threadedlog_nested_instances_keep_distinct_locks (entered sink)", entered_sink);
+	ASSERT_TRUE("test_threadedlog_nested_instances_keep_distinct_locks (serialized callbacks)", !overlapped);
+	RETURN_TEST("test_threadedlog_nested_instances_keep_distinct_locks", result);
+}
+
+int test_threadedlog_throwing_newline_manipulator_releases_lock() {
+	int result = 0;
+	std::ostringstream output;
+	ThreadedLog log(output, Level::Info, "%L:");
+	log << Level::Info << "before" << &WriteNewlineThenThrow;
+	std::thread next([&] { log << Level::Info << "after" << std::endl; });
+	next.join();
+	ASSERT_EQUAL("test_threadedlog_throwing_newline_manipulator_releases_lock",
+		"Info    : before\nInfo    : after\n", output.str());
+	RETURN_TEST("test_threadedlog_throwing_newline_manipulator_releases_lock", result);
 }
 
 int test_threadedlog_throttle_error_releases_open_line_lock() {
@@ -269,6 +365,26 @@ int test_threadedlog_every_accepted_payload() {
 		+ static_cast<std::string>(StormByte::Base64Encode(raw));
 	ASSERT_EQUAL("test_threadedlog_every_accepted_payload", std::string("Info    : ") + body + "\n", output.str());
 	RETURN_TEST("test_threadedlog_every_accepted_payload", result);
+}
+
+int test_threadedlog_safe_containers_keep_one_logical_line() {
+	int result = 0;
+	std::ostringstream output;
+	ThreadedLog log(output, Level::Info, "%L:");
+	const StormByte::Safe::Optional<String> present{String{"value"}};
+	const StormByte::Safe::Optional<String> empty{std::nullopt};
+	const StormByte::Safe::Vector<StormByte::Safe::Optional<String>> values{present, empty};
+	const StormByte::Safe::Map<String, StormByte::Safe::Optional<String>> entries(std::map<
+		String, StormByte::Safe::Optional<String>>{
+			{String{"alpha"}, present},
+			{String{"beta"}, empty}
+		});
+	log << Level::Info << values << ' ' << entries << std::endl;
+	const std::string expected =
+		"Info    : [value, (empty Safe::Optional)] {\n"
+		"\talpha: value\n\tbeta: (empty Safe::Optional)\n}\n";
+	ASSERT_EQUAL("test_threadedlog_safe_containers_keep_one_logical_line", expected, output.str());
+	RETURN_TEST("test_threadedlog_safe_containers_keep_one_logical_line", result);
 }
 
 // -------------------
@@ -488,6 +604,18 @@ int test_threadedlog_push_format_overrides_component_and_restores_resolution() {
 		"MEDIA[Info    ] media after component switch\n";
 	ASSERT_EQUAL("test_threadedlog_push_format_overrides_component_and_restores_resolution", expected, output.str());
 	RETURN_TEST("test_threadedlog_push_format_overrides_component_and_restores_resolution", result);
+}
+
+int test_threadedlog_malformed_format_tokens_remain_literal() {
+	int result = 0;
+	std::ostringstream output;
+	ThreadedLog log(output, Level::Info, "bad[%Q %");
+	log << Level::Info << "first" << std::endl;
+	log.Format("good[%L]");
+	log << Level::Info << "after format change" << std::endl;
+	ASSERT_EQUAL("test_threadedlog_malformed_format_tokens_remain_literal",
+		"bad[%Q % Info    : first\ngood[Info    ] after format change\n", output.str());
+	RETURN_TEST("test_threadedlog_malformed_format_tokens_remain_literal", result);
 }
 
 // -------------------
@@ -1069,6 +1197,8 @@ int main() {
 	result += test_shared_unwraps_without_dereference();
 	result += test_threadedlog_basic();
 	result += test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues();
+	result += test_threadedlog_nested_instances_keep_distinct_locks();
+	result += test_threadedlog_throwing_newline_manipulator_releases_lock();
 	result += test_threadedlog_throttle_error_releases_open_line_lock();
 
 	// -------------------
@@ -1079,6 +1209,7 @@ int main() {
 	result += test_threadedlog_span_hex();
 	result += test_threadedlog_span_vector_converts();
 	result += test_threadedlog_every_accepted_payload();
+	result += test_threadedlog_safe_containers_keep_one_logical_line();
 
 	// -------------------
 	// Color
@@ -1098,6 +1229,7 @@ int main() {
 	result += test_threadedlog_empty_component_does_not_push();
 	result += test_threadedlog_format_change_redecides_throttle_line();
 	result += test_threadedlog_push_format_overrides_component_and_restores_resolution();
+	result += test_threadedlog_malformed_format_tokens_remain_literal();
 
 	// -------------------
 	// Filter lock

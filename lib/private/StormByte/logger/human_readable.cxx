@@ -71,7 +71,11 @@ namespace StormByte::Logger::Detail {
 
 			return oss.str();
 		} catch (...) {
-			return std::to_string(number);
+			try {
+				return std::to_string(number);
+			} catch (...) {
+				return {};
+			}
 		}
 	}
 
@@ -122,7 +126,11 @@ namespace StormByte::Logger::Detail {
 
 			return (negative ? "-" : "") + oss.str() + " " + suffix;
 		} catch (...) {
-			return std::to_string(bytes) + " Bytes";
+			try {
+				return std::to_string(bytes) + " Bytes";
+			} catch (...) {
+				return {};
+			}
 		}
 	}
 }

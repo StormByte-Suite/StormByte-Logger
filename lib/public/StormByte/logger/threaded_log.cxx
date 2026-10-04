@@ -44,9 +44,11 @@
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wstring.hxx>
 
+#include <algorithm>
 #include <exception>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 using namespace StormByte::Logger;
 
@@ -57,20 +59,25 @@ ThreadedLog& ThreadedLog::operator=(const ThreadedLog&) = default;
 ThreadedLog& ThreadedLog::operator=(ThreadedLog&&) noexcept = default;
 
 namespace {
-	thread_local bool t_line_held = false;
+	thread_local std::vector<const StormByte::ThreadLock*> t_line_locks;
+
+	bool line_held(const StormByte::Safe::Shared<StormByte::ThreadLock>& lock) {
+		return std::find(t_line_locks.begin(), t_line_locks.end(), lock.operator->()) != t_line_locks.end();
+	}
 
 	void claim_line(const StormByte::Safe::Shared<StormByte::ThreadLock>& lock) {
-		if (!t_line_held) {
-			lock->Lock();
-			t_line_held = true;
-		}
+		if (line_held(lock))
+			return;
+		t_line_locks.push_back(lock.operator->());
+		lock->Lock();
 	}
 
 	void release_line(const StormByte::Safe::Shared<StormByte::ThreadLock>& lock) {
-		if (t_line_held) {
-			lock->Unlock();
-			t_line_held = false;
-		}
+		const auto held = std::find(t_line_locks.begin(), t_line_locks.end(), lock.operator->());
+		if (held == t_line_locks.end())
+			return;
+		lock->Unlock();
+		t_line_locks.erase(held);
 	}
 
 	[[noreturn]] void rethrow_threaded_exception(std::exception_ptr error, const char* operation) {
@@ -88,7 +95,7 @@ namespace {
 	template<typename Operation>
 	auto with_line_lock(const StormByte::Safe::Shared<StormByte::ThreadLock>& lock,
 		const char* description, Operation&& operation) -> decltype(operation()) {
-		const bool already_held = t_line_held;
+		const bool already_held = line_held(lock);
 		claim_line(lock);
 		try {
 			if constexpr (std::is_void_v<decltype(operation())>) {
@@ -113,9 +120,12 @@ namespace {
 			return true;
 		if (manip == static_cast<std::ostream& (*)(std::ostream&)>(std::ends))
 			return false;
+		std::ostringstream probe;
 		try {
-			std::ostringstream probe;
 			probe << manip;
+		} catch (...) {
+		}
+		try {
 			return probe.str().find('\n') != std::string::npos;
 		} catch (...) {
 			return false;
@@ -380,7 +390,7 @@ void ThreadedLog::Write(FormatManip m) {
 }
 
 void ThreadedLog::Write(PopFormatManip m) {
-	const bool already_held = t_line_held;
+	const bool already_held = line_held(m_lock);
 	if (LineDecided() && !LineAdmitted()) {
 		Log::Write(m);
 		return;

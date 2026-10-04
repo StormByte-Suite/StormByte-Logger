@@ -45,12 +45,15 @@
 #include <StormByte/safe/callback.hxx>
 #include <StormByte/safe/clonable.hxx>
 #include <StormByte/safe/cstring.hxx>
+#include <StormByte/safe/map.hxx>
+#include <StormByte/safe/optional.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
+#include <StormByte/safe/vector.hxx>
 #include <StormByte/type_traits.hxx>
 #include <StormByte/type_traits/safe.hxx>
 
@@ -541,6 +544,65 @@ namespace StormByte::Logger {
 				const std::string text = static_cast<std::string>(v);
 				WriteValue(std::string_view{text});
 				return *this;
+			}
+
+			/**
+			 * @brief Stream a Safe optional value, or a marker when it is empty.
+			 * @tparam T Safe value type that has a Log streaming overload.
+			 * @param value Optional value to write.
+			 * @return Reference to this logger.
+			 */
+			template <typename T>
+			requires StormByte::Type::SafeValue<T>
+			inline Log& operator<<(const StormByte::Safe::Optional<T>& value) {
+				if (value.has_value())
+					return *this << *value;
+				return *this << "(empty Safe::Optional)";
+			}
+
+			/**
+			 * @brief Stream Safe vector values in bracketed, comma-separated form.
+			 * @tparam T Safe value type that has a Log streaming overload.
+			 * @param values Values to write.
+			 * @return Reference to this logger.
+			 */
+			template <typename T>
+			requires StormByte::Type::SafeValue<T>
+			inline Log& operator<<(const StormByte::Safe::Vector<T>& values) {
+				*this << '[';
+				bool first_value = true;
+				for (const auto& value : values) {
+					if (!first_value)
+						*this << ", ";
+					*this << value;
+					first_value = false;
+				}
+				return *this << ']';
+			}
+
+			/**
+			 * @brief Stream Safe map entries on separate, indented lines.
+			 * @tparam Key Safe key type that has a Log streaming overload.
+			 * @tparam Value Safe mapped type that has a Log streaming overload.
+			 * @param values Map entries to write.
+			 * @return Reference to this logger.
+			 */
+			template <typename Key, typename Value>
+			requires StormByte::Type::SafeValue<Key> && StormByte::Type::SafeValue<Value>
+			inline Log& operator<<(const StormByte::Safe::Map<Key, Value>& values) {
+				*this << '{';
+				if (!values.empty()) {
+					*this << '\n';
+					bool first_entry = true;
+					for (const auto& entry : values) {
+						if (!first_entry)
+							*this << '\n';
+						*this << '\t' << entry.first << ": " << entry.second;
+						first_entry = false;
+					}
+					*this << '\n';
+				}
+				return *this << '}';
 			}
 
 			/**

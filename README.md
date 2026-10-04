@@ -58,6 +58,7 @@ The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedi
   - [A line](#a-line)
   - [Sharing a logger](#sharing-a-logger)
   - [Owned text and Size](#owned-text-and-size)
+  - [Safe wrappers](#safe-wrappers)
   - [Human-readable numbers](#human-readable-numbers)
   - [Redaction](#redaction)
   - [Hex and binary payloads](#hex-and-binary-payloads)
@@ -252,6 +253,16 @@ if (!log.Enabled(Level::Debug)) {
 `component("Media")`, `group("work")` and `push_format("[%L]")` take `std::string_view` in the caller (literals work). The manipulator stores an owned `String`.
 
 Ill-formed wide input is written as U+FFFD (`EF BF BD`). Logger does not throw `UTF8Error` on that path. A filtered wide write does not convert at all.
+
+### Safe wrappers
+
+`operator<<` also accepts `StormByte::Safe::Optional`, `StormByte::Safe::Vector`
+and `StormByte::Safe::Map`, including nested combinations when their values
+have a Logger streaming overload. A present optional writes its value; an
+empty one writes `(empty Safe::Optional)`. Vectors use `[value1, value2]`;
+maps use one tab-indented `key: value` entry per line, in the map's key order.
+Empty containers write `[]` and `{}`. `StormByte::BinaryData` has the same
+Base64 and hex output as an equivalent `std::vector<std::byte>`.
 
 ### Human-readable numbers
 

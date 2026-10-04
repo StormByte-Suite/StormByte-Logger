@@ -271,7 +271,7 @@ namespace StormByte::Logger {
 			 * @param level Level whose color is requested.
 			 * @return Component override or general color.
 			 */
-			StormByte::Logger::Color Color(const std::string& component, const Level& level) const noexcept;
+			StormByte::Logger::Color Color(const std::string& component, const Level& level) const;
 
 			/**
 			 * @brief Set the general header format.
@@ -283,7 +283,7 @@ namespace StormByte::Logger {
 			 * @brief Get the effective current header format.
 			 * @return Temporary, component-specific or general format.
 			 */
-			const std::string& Format() const noexcept;
+			const std::string& Format() const;
 
 			/**
 			 * @brief Set or remove a component-specific header format.
@@ -297,7 +297,7 @@ namespace StormByte::Logger {
 			 * @param component Component path.
 			 * @return Component format or general format.
 			 */
-			const std::string& Format(const std::string& component) const noexcept;
+			const std::string& Format(const std::string& component) const;
 
 			/**
 			 * @brief Install a throttle rule.
@@ -611,13 +611,16 @@ namespace StormByte::Logger {
 			 * @brief Ensure the header has been printed for the current line.
 			 */
 			void ensure_header() noexcept {
-				if (!PrepareLine())
-					return;
-				close_deferred_line();
-				if (!HasOpenOutputLine()) {
-					BeginOutputLine();
-					write_drop_summary();
-					print_header();
+				try {
+					if (!PrepareLine())
+						return;
+					close_deferred_line();
+					if (!HasOpenOutputLine()) {
+						BeginOutputLine();
+						write_drop_summary();
+						print_header();
+					}
+				} catch (...) {
 				}
 			}
 
@@ -678,20 +681,23 @@ namespace StormByte::Logger {
 			 * @param text Text to write.
 			 */
 			void write_text(std::string_view text) noexcept {
-				ensure_header();
-				if (!LineAdmitted())
-					return;
-				sync_content_color();
-				std::string formatted;
-				std::string_view payload = text;
-				if (m_hex_active) {
-					formatted = FormatHex(text, m_hex_columns);
-					payload = formatted;
+				try {
+					ensure_header();
+					if (!LineAdmitted())
+						return;
+					sync_content_color();
+					std::string formatted;
+					std::string_view payload = text;
+					if (m_hex_active) {
+						formatted = FormatHex(text, m_hex_columns);
+						payload = formatted;
+					}
+					if (m_redact_active)
+						sink_write(ApplyRedact(payload, m_redact_count, m_redact_keep_first));
+					else
+						sink_write(payload);
+				} catch (...) {
 				}
-				if (m_redact_active)
-					sink_write(ApplyRedact(payload, m_redact_count, m_redact_keep_first));
-				else
-					sink_write(payload);
 			}
 
 			/**
@@ -793,7 +799,7 @@ namespace StormByte::Logger {
 			 * @brief Effective header format for the current line.
 			 * @return Format string.
 			 */
-			const std::string& effective_format() const noexcept;
+			const std::string& effective_format() const;
 
 			/**
 			 * @brief Format and write an arithmetic value.

@@ -159,9 +159,12 @@ namespace {
 		if (manip == static_cast<std::ostream& (*)(std::ostream&)>(std::ends)
 			|| manip == static_cast<std::ostream& (*)(std::ostream&)>(std::flush))
 			return false;
+		std::ostringstream probe;
 		try {
-			std::ostringstream probe;
 			manip(probe);
+		} catch (...) {
+		}
+		try {
 			return probe.str().find('\n') != std::string::npos;
 		} catch (...) {
 			return false;
@@ -318,7 +321,11 @@ Engine::~Engine() noexcept {
 }
 
 void Engine::SetFacadePath(std::string_view path) noexcept {
-	t_facade_path.assign(path.data(), path.size());
+	try {
+		t_facade_path.assign(path.data(), path.size());
+	} catch (...) {
+		t_facade_path.clear();
+	}
 }
 
 std::shared_ptr<const ThrottleTable> Engine::LoadThrottleTable() const noexcept {
@@ -367,7 +374,7 @@ StormByte::Logger::Color Engine::Color(const Level& level) const noexcept {
 	return StormByte::Logger::Color::Default;
 }
 
-StormByte::Logger::Color Engine::Color(const std::string& component, const Level& level) const noexcept {
+StormByte::Logger::Color Engine::Color(const std::string& component, const Level& level) const {
 	for (std::string path = component; !path.empty(); path = ParentPath(path)) {
 		if (const auto found = m_component_colors.find(path); found != m_component_colors.end())
 			return found->second[ColorIndex(level)];
@@ -375,7 +382,7 @@ StormByte::Logger::Color Engine::Color(const std::string& component, const Level
 	return Color(level);
 }
 
-const std::string& Engine::effective_format() const noexcept {
+const std::string& Engine::effective_format() const {
 	if (!m_format_stack.empty())
 		return m_format_stack.back();
 	const auto& component = t_line.decided ? t_line.component : CurrentPath();
@@ -386,11 +393,11 @@ const std::string& Engine::effective_format() const noexcept {
 	return m_format;
 }
 
-const std::string& Engine::Format() const noexcept {
+const std::string& Engine::Format() const {
 	return effective_format();
 }
 
-const std::string& Engine::Format(const std::string& component) const noexcept {
+const std::string& Engine::Format(const std::string& component) const {
 	for (std::string path = component; !path.empty(); path = ParentPath(path)) {
 		if (const auto found = m_component_formats.find(path); found != m_component_formats.end())
 			return found->second;
@@ -472,7 +479,10 @@ void Engine::NoThrottle(const ThrottleSpec& spec) {
 }
 
 void Engine::NoThrottleAll() noexcept {
-	StoreThrottleTable(std::make_shared<const ThrottleTable>());
+	try {
+		StoreThrottleTable(std::make_shared<const ThrottleTable>());
+	} catch (...) {
+	}
 }
 
 void Engine::FlushThrottle() {
@@ -614,16 +624,19 @@ void Engine::reset_line_state() noexcept {
 }
 
 void Engine::write_drop_summary() noexcept {
-	if (t_line.dropped == 0)
-		return;
-	print_header();
-	sync_content_color();
-	sink_write("dropped ");
-	sink_write(std::to_string(t_line.dropped));
-	sink_write(" messages");
-	reset_color();
-	sink_char('\n');
-	t_line.dropped = 0;
+	try {
+		if (t_line.dropped == 0)
+			return;
+		print_header();
+		sync_content_color();
+		sink_write("dropped ");
+		sink_write(std::to_string(t_line.dropped));
+		sink_write(" messages");
+		reset_color();
+		sink_char('\n');
+		t_line.dropped = 0;
+	} catch (...) {
+	}
 }
 
 Engine& Engine::operator<<(const Level& level) noexcept {
@@ -644,28 +657,37 @@ Engine& Engine::operator<<(const Level& level) noexcept {
 }
 
 Engine& Engine::operator<<(std::ostream& (*manip)(std::ostream&)) noexcept {
-	if (ManipulatorWritesNewline(manip)) {
-		// A newline closes the line. The next admitted payload prints a new header.
-		// std::endl is forwarded only when this line is actually emitted, so the
-		// caller flushes and the text shows up at this instant. A filtered or
-		// throttled line never touches the stream: there is nothing to flush.
-		if (Enabled() && PrepareLine()) {
-			write_drop_summary();
-			reset_color();
-			if (t_line.admitted)
-				sink_manip(manip);
+	try {
+		if (ManipulatorWritesNewline(manip)) {
+			// A newline closes the line. The next admitted payload prints a new header.
+			// std::endl is forwarded only when this line is actually emitted, so the
+			// caller flushes and the text shows up at this instant. A filtered or
+			// throttled line never touches the stream: there is nothing to flush.
+			if (Enabled() && PrepareLine()) {
+				write_drop_summary();
+				reset_color();
+				if (t_line.admitted)
+					sink_manip(manip);
+			}
+
+			t_line.header_displayed = false;
+			m_content_color.reset();
+			m_content_nocolor = false;
+			t_group.clear();
+			reset_line_state();
+			return *this;
 		}
 
+		if (Enabled())
+			sink_manip(manip);
+	} catch (...) {
+		reset_color();
 		t_line.header_displayed = false;
 		m_content_color.reset();
 		m_content_nocolor = false;
 		t_group.clear();
 		reset_line_state();
-		return *this;
 	}
-
-	if (Enabled())
-		sink_manip(manip);
 	return *this;
 }
 
@@ -755,28 +777,31 @@ Engine& Engine::operator<<(ResetComponentManip) {
 	return *this;
 }
 
-void Engine::print_time(std::string& out) const noexcept {
+void Engine::print_time(std::string& out) const noexcept try {
 	out += CurrentTime();
+} catch (...) {
 }
 
-void Engine::print_level(std::string& out) const noexcept {
+void Engine::print_level(std::string& out) const noexcept try {
 	constexpr std::size_t fixed_width = 8;
 	const char* const level_str = LevelToString(t_line.decided ? t_line.level : t_level.value_or(m_print_level));
 	out += level_str;
 	const std::size_t length = std::char_traits<char>::length(level_str);
 	if (length < fixed_width)
 		out.append(fixed_width - length, ' ');
+} catch (...) {
 }
 
-void Engine::print_thread_id(std::string& out) const noexcept {
+void Engine::print_thread_id(std::string& out) const noexcept try {
 	thread_local std::ostringstream id;
 	id.str({});
 	id.clear();
 	id << std::this_thread::get_id();
 	out += id.str();
+} catch (...) {
 }
 
-void Engine::print_header() noexcept {
+void Engine::print_header() noexcept try {
 	std::string header;
 	header.reserve(160);
 	const std::string& fmt = effective_format();
@@ -822,9 +847,11 @@ void Engine::print_header() noexcept {
 
 	header.push_back(' ');
 	sink_write(header);
+} catch (...) {
+	sink_write("[header unavailable] ");
 }
 
-void Engine::append_color(std::string& out, const StormByte::Logger::Color color) noexcept {
+void Engine::append_color(std::string& out, const StormByte::Logger::Color color) noexcept try {
 	if (m_active_color == std::optional<StormByte::Logger::Color>{color})
 		return;
 	if (m_active_color) {
@@ -836,6 +863,9 @@ void Engine::append_color(std::string& out, const StormByte::Logger::Color color
 		out += AnsiColor(color);
 		m_active_color = color;
 	}
+} catch (...) {
+	out.clear();
+	m_active_color.reset();
 }
 
 void Engine::emit_color(const StormByte::Logger::Color color) noexcept {
@@ -844,7 +874,7 @@ void Engine::emit_color(const StormByte::Logger::Color color) noexcept {
 	sink_write(sequence);
 }
 
-void Engine::sync_content_color() noexcept {
+void Engine::sync_content_color() noexcept try {
 	const auto level = t_line.decided ? t_line.level : t_level.value_or(m_print_level);
 	const auto component = t_line.decided ? t_line.component : CurrentPath();
 	const auto configured = Color(component, level);
@@ -854,6 +884,8 @@ void Engine::sync_content_color() noexcept {
 		emit_color(*m_content_color);
 	else
 		emit_color(configured);
+} catch (...) {
+	emit_color(StormByte::Logger::Color::Default);
 }
 
 void Engine::reset_color() noexcept {

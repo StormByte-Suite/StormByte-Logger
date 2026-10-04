@@ -42,6 +42,8 @@
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
 #include <StormByte/safe/cstring.hxx>
+#include <StormByte/safe/map.hxx>
+#include <StormByte/safe/optional.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/log.hxx>
@@ -50,10 +52,12 @@
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
+#include <StormByte/safe/vector.hxx>
 #include <StormByte/test_handlers.h>
 
 #include <clocale>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <span>
 #include <sstream>
@@ -258,10 +262,13 @@ int test_binary_data_default_is_base64() {
 	std::ostringstream output;
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
-	const BinaryData raw{std::byte{'H'}, std::byte{'i'}};
+	const std::vector<std::byte> bytes{std::byte{'H'}, std::byte{'i'}};
+	const BinaryData raw{bytes};
 	log << Level::Info << raw << std::endl;
+	log << Level::Info << bytes << std::endl;
 	ASSERT_EQUAL("test_binary_data_default_is_base64",
-		std::string("Info    : ") + static_cast<std::string>(StormByte::Base64Encode(raw)) + "\n", output.str());
+		std::string("Info    : ") + static_cast<std::string>(StormByte::Base64Encode(raw)) +
+		"\nInfo    : " + static_cast<std::string>(StormByte::Base64Encode(bytes)) + "\n", output.str());
 	RETURN_TEST("test_binary_data_default_is_base64", result);
 }
 
@@ -805,9 +812,36 @@ int test_string_payload() {
 	std::ostringstream output;
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
-	log << Level::Info << String{"owned"} << std::endl;
-	ASSERT_EQUAL("test_string_payload", "Info    : owned\n", output.str());
+	log << Level::Info
+		<< CString{"c"} << ' '
+		<< String{"owned"} << ' '
+		<< WCString{L"wide-c"} << ' '
+		<< WString{L"wide-owned"} << std::endl;
+	ASSERT_EQUAL("test_string_payload", "Info    : c owned wide-c wide-owned\n", output.str());
 	RETURN_TEST("test_string_payload", result);
+}
+
+int test_safe_optional_vector_and_map_payloads() {
+	int result = 0;
+	std::ostringstream output;
+	Log log(output, Level::Info, "%L:");
+	IsolateLine(log);
+	const StormByte::Safe::Optional<int> present{42};
+	const StormByte::Safe::Optional<int> empty{std::nullopt};
+	const StormByte::Safe::Vector<StormByte::Safe::Optional<int>> sequence{present, empty};
+	const StormByte::Safe::Map<String, String> entries(std::map<String, String>{
+		{String{"alpha"}, String{"one"}},
+		{String{"beta"}, String{"two"}}
+	});
+	const StormByte::Safe::Vector<int> empty_sequence{};
+	const StormByte::Safe::Map<String, String> empty_entries{};
+	log << Level::Info << present << ' ' << empty << ' ' << sequence << ' ' << entries
+		<< ' ' << empty_sequence << ' ' << empty_entries << std::endl;
+	const std::string expected =
+		"Info    : 42 (empty Safe::Optional) [42, (empty Safe::Optional)] {\n"
+		"\talpha: one\n\tbeta: two\n} [] {}\n";
+	ASSERT_EQUAL("test_safe_optional_vector_and_map_payloads", expected, output.str());
+	RETURN_TEST("test_safe_optional_vector_and_map_payloads", result);
 }
 
 int test_string_view_and_wstring_view_payloads() {
@@ -1443,6 +1477,7 @@ int main() {
 	result += test_size_payload();
 	result += test_bytesize_payload();
 	result += test_string_payload();
+	result += test_safe_optional_vector_and_map_payloads();
 	result += test_string_view_and_wstring_view_payloads();
 	result += test_wcstring_payload();
 	result += test_wstring_payload();

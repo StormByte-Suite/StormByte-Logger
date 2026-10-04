@@ -55,7 +55,7 @@
 namespace StormByte::Logger {
 	/**
 	 * @class Exception
-	 * @brief Root exception for Logger. `what()` is `StormByte.Logger: message`.
+	 * @brief Root exception for Logger. @c what() is @c StormByte.Logger: message.
 	 *
 	 * Forwards the format and the arguments. Does not format. A child segment
 	 * is prepended under `Logger`.
@@ -79,7 +79,7 @@ namespace StormByte::Logger {
 
 		protected:
 			/**
-			 * @brief Format under `StormByte.Logger.<child>`.
+			 * @brief Format under @c StormByte.Logger with the child segment appended.
 			 * @tparam Args Format argument types.
 			 * @param child Segment under `Logger`.
 			 * @param fmt Format string.
