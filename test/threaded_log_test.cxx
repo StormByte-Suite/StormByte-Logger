@@ -379,7 +379,7 @@ int test_threadedlog_safe_containers_keep_one_logical_line() {
 			{String{"alpha"}, present},
 			{String{"beta"}, empty}
 		});
-	log << Level::Info << values << ' ' << entries << std::endl;
+	log << Level::Info << values << " " << entries << std::endl;
 	const std::string expected =
 		"Info    : [value, (empty Safe::Optional)] {\n"
 		"\talpha: value\n\tbeta: (empty Safe::Optional)\n}\n";
