@@ -466,8 +466,13 @@ int test_manip_redact_wstring_owned() {
 
 int test_manip_throttle_level_selector() {
 	int result = 0;
+	static_assert(StormByte::Type::SameAs<decltype(ThrottleSpec::Component), StormByte::Safe::Optional<String>>);
+	static_assert(StormByte::Type::SameAs<decltype(ThrottleSpec::Group), StormByte::Safe::Optional<String>>);
 	ThrottleSpec spec{.Component = std::nullopt, .Level = Level::Info, .Group = std::nullopt};
+	spec.Component.emplace(String{"Core"});
 	ASSERT_TRUE("test_manip_throttle_level_selector", spec.Level == Level::Info);
+	ASSERT_TRUE("test_manip_throttle_level_selector (safe optionals)",
+		spec.Component.has_value() && !spec.Group.has_value());
 	RETURN_TEST("test_manip_throttle_level_selector", result);
 }
 

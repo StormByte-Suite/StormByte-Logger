@@ -42,6 +42,7 @@
 
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
+#include <StormByte/safe/callback.hxx>
 #include <StormByte/safe/clonable.hxx>
 #include <StormByte/safe/cstring.hxx>
 #include <StormByte/logger/manipulators.hxx>
@@ -95,7 +96,7 @@ namespace StormByte::Logger {
 	 * @class Log
 	 * @brief Public streaming facade for the StormByte logger.
 	 *
-	 * Owns a shared_ptr to the internal Engine and exposes operator<<
+	 * Owns a Safe::Shared backend on Base's heap and exposes operator<<
 	 * overloads similar to std::ostream. Filtered levels early-out without I/O.
 	 * The configured print level does not suppress Warning, Error or Fatal.
 	 *
@@ -131,6 +132,14 @@ namespace StormByte::Logger {
 			 */
 			Log(std::ostream& out, const Level& level = Level::Info, std::string_view format = "[%L] %T")
 				: Log(&OStreamWrite, &OStreamManip, &out, level, format) {}
+
+			/**
+			 * @brief Construct a Log that emits text through a Base-owned callback.
+			 * @param callback Sink taking ownership of the callback and its context.
+			 * @param level Minimum Level that will be emitted.
+			 * @param format Header format: %L level, %T timestamp, %i thread id, %c component, %g group, %% literal %.
+			 */
+			Log(StormByte::Safe::Callback&& callback, const Level& level = Level::Info, std::string_view format = "[%L] %T");
 
 			/**
 			 * @brief Copy constructor.
@@ -678,7 +687,7 @@ namespace StormByte::Logger {
 			 */
 			Log(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format);
 
-			std::shared_ptr<Engine> m_engine;			///< Shared backend
+			StormByte::Safe::Shared<Engine> m_engine;			///< Shared backend on Base's heap
 			StormByte::Safe::String m_scope_path;			///< Sticky component path; empty = root facade
 
 			/**

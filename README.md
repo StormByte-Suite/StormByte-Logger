@@ -445,8 +445,9 @@ match, the longer component string wins.
 it is always visible with respect to the print floor.
 
 `ThrottleSpec::Component` and `ThrottleSpec::Group` are
-`std::optional<StormByte::Safe::String>`. Assigning a literal still works
-where `Safe::String` can be constructed from it.
+`StormByte::Safe::Optional<StormByte::Safe::String>`, keeping optional owned
+text safe across the DLL boundary. Assigning a literal still works where
+`Safe::String` can be constructed from it.
 
 ```cpp
 ThrottleSpec spec;

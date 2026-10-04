@@ -42,6 +42,7 @@
 
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/logger/visibility.h>
+#include <StormByte/safe/optional.hxx>
 #include <StormByte/safe/string.hxx>
 
 #include <cstddef>
@@ -73,9 +74,9 @@ namespace StormByte::Logger {
 	 * Component or Group selects the root/empty key.
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC ThrottleSpec {
-		std::optional<StormByte::Safe::String> Component; ///< Optional component selector.
+		StormByte::Safe::Optional<StormByte::Safe::String> Component; ///< Optional component selector.
 		std::optional<StormByte::Logger::Level> Level; ///< Optional level selector.
-		std::optional<StormByte::Safe::String> Group;		///< Optional group selector.
+		StormByte::Safe::Optional<StormByte::Safe::String> Group;		///< Optional group selector.
 		double Rate = 0.0;									///< Lines per second; zero disables refill.
 		std::size_t Burst = 0;								///< Initial and maximum token capacity.
 		ThrottlePolicy Policy = ThrottlePolicy::Drop;		///< Count policy.

@@ -45,6 +45,7 @@
 #include <StormByte/logger/human_readable.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
+#include <StormByte/safe/callback.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wstring.hxx>
@@ -60,6 +61,7 @@
 #include <mutex>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -132,6 +134,14 @@ namespace StormByte::Logger {
 			 * @param format Header format string (%L, %T, %i, %c, %g, %%).
 			 */
 			Engine(SinkWrite write, SinkManip manip, void* context, const Level& level = Level::Info, const std::string& format = "[%L] %T");
+
+			/**
+			 * @brief Construct an internal logger using a Base-owned output callback.
+			 * @param callback Callback receiving each emitted text segment.
+			 * @param level Initial minimum Level that will be emitted.
+			 * @param format Header format string (%L, %T, %i, %c, %g, %%).
+			 */
+			Engine(StormByte::Safe::Callback&& callback, const Level& level = Level::Info, const std::string& format = "[%L] %T");
 
 			Engine(const Engine&) = delete;
 
@@ -488,9 +498,18 @@ namespace StormByte::Logger {
 			 * @param text Bytes to write.
 			 */
 			void sink_write(std::string_view text) const noexcept {
-				if (m_write == nullptr || text.empty())
+				if (text.empty())
 					return;
-				m_write(m_context, text.data(), text.size());
+				if (m_callback) {
+					try {
+						const StormByte::Safe::String owned{text};
+						(void)m_callback->Call(owned);
+					} catch (...) {
+					}
+					return;
+				}
+				if (m_write != nullptr)
+					m_write(m_context, text.data(), text.size());
 			}
 
 			/**
@@ -508,14 +527,27 @@ namespace StormByte::Logger {
 			 * @param manip Manipulator, for example `std::endl`.
 			 */
 			void sink_manip(std::ostream& (*manip)(std::ostream&)) const noexcept {
-				if (m_manip == nullptr || manip == nullptr)
+				if (manip == nullptr)
 					return;
+				if (m_callback) {
+					try {
+						std::ostringstream output;
+						manip(output);
+						const std::string text = output.str();
+						if (!text.empty())
+							sink_write(text);
+					} catch (...) {
+					}
+					return;
+				}
+				if (m_manip != nullptr)
 				m_manip(m_context, manip);
 			}
 
 			SinkWrite m_write = nullptr;									///< Caller write callback
 			SinkManip m_manip = nullptr;									///< Caller manipulator callback
 			void* m_context = nullptr;									///< Opaque sink, not owned
+			std::optional<StormByte::Safe::Callback> m_callback;						///< Owned Base callback sink, when configured
 			Level m_print_level;										///< Minimum level that will be printed
 			std::optional<Level> m_current_level;								///< Level of the current message
 			std::atomic<bool> m_enabled;									///< Whether the current level is enabled
@@ -808,8 +840,16 @@ namespace StormByte::Logger {
 	extern template STORMBYTE_LOGGER_PRIVATE Engine& Engine::operator<<<std::span<const std::byte>>(const std::span<const std::byte>& value);
 
 	/**
+	 * @brief Nullable standard or Base-owned pointer to Engine.
+	 * @tparam Ptr Pointer type.
+	 */
+	template <typename Ptr>
+	concept EnginePointer = StormByte::Type::NullablePointer<Ptr>
+		&& StormByte::Type::SameAs<typename std::remove_cvref_t<Ptr>::element_type, Engine>;
+
+	/**
 	 * @brief Stream a value into a smart pointer to Engine.
-	 * @tparam Ptr shared_ptr or unique_ptr of Engine.
+	 * @tparam Ptr Standard or Base-owned pointer to Engine.
 	 * @tparam T Value type.
 	 * @param logger Smart pointer.
 	 * @param value Value to stream.
@@ -817,7 +857,7 @@ namespace StormByte::Logger {
 	 */
 	template <typename Ptr, typename T>
 	Ptr& operator<<(Ptr& logger, const T& value)
-	requires StormByte::Type::SameAs<Ptr, std::shared_ptr<Engine>> || StormByte::Type::SameAs<Ptr, std::unique_ptr<Engine>> {
+	requires EnginePointer<Ptr> {
 		if (logger)
 			*logger << value;
 		return logger;
@@ -825,14 +865,14 @@ namespace StormByte::Logger {
 
 	/**
 	 * @brief Stream a Level into a smart pointer to Engine.
-	 * @tparam Ptr shared_ptr or unique_ptr of Engine.
+	 * @tparam Ptr Standard or Base-owned pointer to Engine.
 	 * @param logger Smart pointer.
 	 * @param level Level to set.
 	 * @return @p logger.
 	 */
 	template <typename Ptr>
 	Ptr& operator<<(Ptr& logger, const Level& level) noexcept
-	requires StormByte::Type::SameAs<Ptr, std::shared_ptr<Engine>> || StormByte::Type::SameAs<Ptr, std::unique_ptr<Engine>> {
+	requires EnginePointer<Ptr> {
 		if (logger)
 			*logger << level;
 		return logger;
@@ -840,14 +880,14 @@ namespace StormByte::Logger {
 
 	/**
 	 * @brief Stream a stream manipulator into a smart pointer to Engine.
-	 * @tparam Ptr shared_ptr or unique_ptr of Engine.
+	 * @tparam Ptr Standard or Base-owned pointer to Engine.
 	 * @param logger Smart pointer.
 	 * @param manip Stream manipulator.
 	 * @return @p logger.
 	 */
 	template <typename Ptr>
 	Ptr& operator<<(Ptr& logger, std::ostream& (*manip)(std::ostream&)) noexcept
-	requires StormByte::Type::SameAs<Ptr, std::shared_ptr<Engine>> || StormByte::Type::SameAs<Ptr, std::unique_ptr<Engine>> {
+	requires EnginePointer<Ptr> {
 		if (logger)
 			*logger << manip;
 		return logger;

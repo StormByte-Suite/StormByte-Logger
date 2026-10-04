@@ -79,6 +79,14 @@ namespace StormByte::Logger {
 				: ThreadedLog(&OStreamWrite, &OStreamManip, &out, level, format) {}
 
 			/**
+			 * @brief Construct a ThreadedLog that emits through a Base-owned callback.
+			 * @param callback Sink taking ownership of the callback and its context.
+			 * @param level Minimum Level that will be emitted.
+			 * @param format Header format string.
+			 */
+			ThreadedLog(StormByte::Safe::Callback&& callback, const Level& level = Level::Info, std::string_view format = "[%L] %T");
+
+			/**
 			 * @brief Copy constructor.
 			 * @note Shares the Engine and the line lock. Copies the sticky path.
 			 */
@@ -399,6 +407,6 @@ namespace StormByte::Logger {
 			ThreadedLog(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format);
 
 		private:
-			std::shared_ptr<ThreadLock> m_lock;	///< Shared line lock (copy and Scope share it)
+			StormByte::Safe::Shared<ThreadLock> m_lock;	///< Shared line lock on Base's heap (copy and Scope share it)
 	};
 }

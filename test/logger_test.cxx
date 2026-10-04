@@ -45,6 +45,7 @@
 #include <StormByte/exception.hxx>
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/log.hxx>
+#include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wcstring.hxx>
@@ -62,6 +63,7 @@
 
 using StormByte::BinaryData;
 using StormByte::ByteSize;
+using StormByte::Safe::Callback;
 using StormByte::Safe::CString;
 using StormByte::Size;
 using StormByte::Safe::WCString;
@@ -70,6 +72,19 @@ using StormByte::Safe::WString;
 using namespace StormByte::Logger;
 
 namespace {
+	StormByte::Safe::Status CaptureLogText(void* context, const String& text) noexcept {
+		try {
+			static_cast<std::string*>(context)->append(static_cast<std::string_view>(text));
+			return StormByte::Safe::Status::Success;
+		} catch (...) {
+			return StormByte::Safe::Status::Failure;
+		}
+	}
+
+	void ReleaseLogText(void* context) noexcept {
+		delete static_cast<std::string*>(context);
+	}
+
 	void IsolateLine(Log& log) {
 		if (!log.Enabled(Level::LowLevel))
 			log << Level::LowLevel << std::endl;
@@ -135,6 +150,30 @@ int test_smart_pointer_usage() {
 	log << Level::Info << "Smart pointer log message" << std::endl;
 	ASSERT_EQUAL("test_smart_pointer_usage", std::string("Info    : Smart pointer log message\n"), output.str());
 	RETURN_TEST("test_smart_pointer_usage", result);
+}
+
+int test_safe_callback_sink() {
+	int result = 0;
+	std::string log_output;
+	{
+		auto* context = new std::string;
+		Log log(Callback{context, &CaptureLogText, &ReleaseLogText}, Level::Info, "%L:");
+		IsolateLine(log);
+		log << Level::Info << "Log callback" << std::endl;
+		log_output = *context;
+	}
+	ASSERT_EQUAL("test_safe_callback_sink_log", "Info    : Log callback\n", log_output);
+
+	std::string threaded_output;
+	{
+		auto* context = new std::string;
+		ThreadedLog log(Callback{context, &CaptureLogText, &ReleaseLogText}, Level::Info, "%L:");
+		IsolateLine(log);
+		log << Level::Info << "Threaded callback" << std::endl;
+		threaded_output = *context;
+	}
+	ASSERT_EQUAL("test_safe_callback_sink_threaded", "Info    : Threaded callback\n", threaded_output);
+	RETURN_TEST("test_safe_callback_sink", result);
 }
 
 // -------------------
@@ -1328,6 +1367,7 @@ int main() {
 	result += test_log_data();
 	result += test_log_with_std_endl();
 	result += test_smart_pointer_usage();
+	result += test_safe_callback_sink();
 
 	// -------------------
 	// Binary span

@@ -83,8 +83,8 @@ namespace {
 		return static_cast<std::string>(text);
 	}
 
-	std::string ToStdOrEmpty(const std::optional<StormByte::Safe::String>& text) {
-		return text ? ToStd(*text) : std::string{};
+	std::string ToStdOrEmpty(const StormByte::Safe::Optional<StormByte::Safe::String>& text) {
+		return text.has_value() ? ToStd(text.value()) : std::string{};
 	}
 
 	bool IsAlwaysVisible(const Level level) noexcept {
@@ -301,6 +301,11 @@ Engine::Engine(SinkWrite write, SinkManip manip, void* context, const Level& lev
 	m_hex_active(false),
 	m_hex_columns(16),
 	m_throttle_table(std::make_shared<const ThrottleTable>()) {
+}
+
+Engine::Engine(StormByte::Safe::Callback&& callback, const Level& level, const std::string& format):
+	Engine(nullptr, nullptr, nullptr, level, format) {
+	m_callback.emplace(std::move(callback));
 }
 
 Engine::~Engine() noexcept {

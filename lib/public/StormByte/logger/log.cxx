@@ -95,7 +95,7 @@ namespace {
 
 	void BindStickyComponent(ThrottleSpec& spec, const StormByte::Safe::String& path) {
 		if (!spec.Component && !static_cast<std::string_view>(path).empty())
-			spec.Component = path;
+			spec.Component.emplace(path);
 	}
 
 	StormByte::Safe::String CopyFormat(const std::string& format) {
@@ -111,7 +111,11 @@ void Log::WriteValue(const T& v) {
 }
 
 Log::Log(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format) {
-	m_engine = std::make_shared<Engine>(write, manip, context, level, std::string{format});
+	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(write, manip, context, level, std::string{format});
+}
+
+Log::Log(StormByte::Safe::Callback&& callback, const Level& level, std::string_view format) {
+	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(std::move(callback), level, std::string{format});
 }
 
 Log::PointerType Log::Clone() const {
@@ -257,21 +261,21 @@ Log& Log::Throttle(const Level& level, double rate, std::size_t burst) {
 
 Log& Log::Throttle(GroupManip group, double rate, std::size_t burst) {
 	auto spec = make_spec(rate, burst);
-	spec.Group = std::move(group.name);
+	spec.Group.emplace(std::move(group.name));
 	return Throttle(spec);
 }
 
 Log& Log::Throttle(ComponentManip component, double rate, std::size_t burst) {
 	auto spec = make_spec(rate, burst);
-	spec.Component = std::move(component.name);
+	spec.Component.emplace(std::move(component.name));
 	return Throttle(spec);
 }
 
 Log& Log::Throttle(ComponentManip component, const Level& level, GroupManip group, double rate, std::size_t burst, ThrottlePolicy policy, std::size_t value, std::size_t period) {
 	auto spec = make_spec(rate, burst, policy, value, period);
-	spec.Component = std::move(component.name);
+	spec.Component.emplace(std::move(component.name));
 	spec.Level = level;
-	spec.Group = std::move(group.name);
+	spec.Group.emplace(std::move(group.name));
 	return Throttle(spec);
 }
 
@@ -288,21 +292,21 @@ Log& Log::NoThrottle(const Level& level) {
 
 Log& Log::NoThrottle(GroupManip group) {
 	ThrottleSpec spec;
-	spec.Group = std::move(group.name);
+	spec.Group.emplace(std::move(group.name));
 	return NoThrottle(spec);
 }
 
 Log& Log::NoThrottle(ComponentManip component) {
 	ThrottleSpec spec;
-	spec.Component = std::move(component.name);
+	spec.Component.emplace(std::move(component.name));
 	return NoThrottle(spec);
 }
 
 Log& Log::NoThrottle(ComponentManip component, const Level& level, GroupManip group) {
 	ThrottleSpec spec;
-	spec.Component = std::move(component.name);
+	spec.Component.emplace(std::move(component.name));
 	spec.Level = level;
-	spec.Group = std::move(group.name);
+	spec.Group.emplace(std::move(group.name));
 	return NoThrottle(spec);
 }
 

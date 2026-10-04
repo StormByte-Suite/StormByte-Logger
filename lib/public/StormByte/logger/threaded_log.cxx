@@ -57,14 +57,14 @@ ThreadedLog& ThreadedLog::operator=(ThreadedLog&&) noexcept = default;
 namespace {
 	thread_local bool t_line_held = false;
 
-	void claim_line(const std::shared_ptr<StormByte::ThreadLock>& lock) {
+	void claim_line(const StormByte::Safe::Shared<StormByte::ThreadLock>& lock) {
 		if (!t_line_held) {
 			lock->Lock();
 			t_line_held = true;
 		}
 	}
 
-	void release_line(const std::shared_ptr<StormByte::ThreadLock>& lock) {
+	void release_line(const StormByte::Safe::Shared<StormByte::ThreadLock>& lock) {
 		if (t_line_held) {
 			lock->Unlock();
 			t_line_held = false;
@@ -87,7 +87,10 @@ namespace {
 }
 
 ThreadedLog::ThreadedLog(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format):
-	Log(write, manip, context, level, format), m_lock(std::make_shared<ThreadLock>()) {}
+	Log(write, manip, context, level, format), m_lock(StormByte::Safe::Heap::MakeShared<ThreadLock>()) {}
+
+ThreadedLog::ThreadedLog(StormByte::Safe::Callback&& callback, const Level& level, std::string_view format):
+	Log(std::move(callback), level, format), m_lock(StormByte::Safe::Heap::MakeShared<ThreadLock>()) {}
 
 Log::PointerType ThreadedLog::Clone() const {
 	return PointerType::MakePointer<ThreadedLog>(*this);

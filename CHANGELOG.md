@@ -22,7 +22,7 @@ If you landed here from a release link and have not read the tree:
 
 [Unreleased]: https://github.com/StormBytePP/StormByte-Logger/compare/2.0.0...HEAD
 
-## [2.0.0] - 2026-10-02
+## [2.0.0] - 2026-10-04
 
 ### Added
 
@@ -44,7 +44,7 @@ If you landed here from a release link and have not read the tree:
 - The private backend is `Engine` (`m_engine`), in `engine.hxx` / `engine.cxx`. It was `Implementation`.
 - Filtered payloads (`WillWrite()` false) return before any conversion or copy. A filtered or throttled `std::endl` does not touch the stream. An emitted line still forwards real `std::endl`, so the text is flushed at that instant and the next payload prints a new header. `std::endl` / `std::flush` / `std::ends` are recognized without probing a string stream.
 - **Breaking (boundary):** `Log` and `ThreadedLog` no longer write an `std::ostream` from inside the DLL. Construction from an `std::ostream` still works and still requires the stream to outlive the logger. Bytes and manipulators (`std::endl`) are applied by `OStreamWrite` / `OStreamManip` in the module that constructed the logger. A protected constructor takes those callbacks directly.
-- **Breaking:** `ThrottleSpec::Component` and `ThrottleSpec::Group` are `std::optional<StormByte::Safe::String>`.
+- **Breaking:** `ThrottleSpec::Component` and `ThrottleSpec::Group` use `StormByte::Safe::Optional<StormByte::Safe::String>` for DLL-boundary-safe optional owned text.
 - **Breaking:** ill-formed wide text is written as U+FFFD (`EF BF BD`). Logger does not throw `StormByte::UTF8Error` on that path.
 - `Log::m_scope_path` is `StormByte::Safe::String` so a copied or derived `Log` does not carry `std::string` across a DLL boundary.
 - Numeric and narrow-text payloads share `Log::WriteValue`; `ThreadedLog` only overrides `BeginPayload` for those payloads.
