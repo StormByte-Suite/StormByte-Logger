@@ -569,7 +569,7 @@ namespace StormByte::Logger {
 			template <typename T>
 			requires StormByte::Type::SafeValue<T>
 			inline Log& operator<<(const StormByte::Safe::Vector<T>& values) {
-				*this << '[';
+				*this << "[";
 				bool first_value = true;
 				for (const auto& value : values) {
 					if (!first_value)
@@ -577,7 +577,7 @@ namespace StormByte::Logger {
 					*this << value;
 					first_value = false;
 				}
-				return *this << ']';
+				return *this << "]";
 			}
 
 			/**
@@ -590,19 +590,19 @@ namespace StormByte::Logger {
 			template <typename Key, typename Value>
 			requires StormByte::Type::SafeValue<Key> && StormByte::Type::SafeValue<Value>
 			inline Log& operator<<(const StormByte::Safe::Map<Key, Value>& values) {
-				*this << '{';
+				*this << "{";
 				if (!values.empty()) {
-					*this << '\n';
+					*this << "\n";
 					bool first_entry = true;
 					for (const auto& entry : values) {
 						if (!first_entry)
-							*this << '\n';
-						*this << '\t' << entry.first << ": " << entry.second;
+							*this << "\n";
+						*this << "\t" << entry.first << ": " << entry.second;
 						first_entry = false;
 					}
-					*this << '\n';
+					*this << "\n";
 				}
-				return *this << '}';
+				return *this << "}";
 			}
 
 			/**

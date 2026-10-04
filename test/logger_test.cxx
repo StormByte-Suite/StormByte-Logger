@@ -813,9 +813,9 @@ int test_string_payload() {
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
 	log << Level::Info
-		<< CString{"c"} << ' '
-		<< String{"owned"} << ' '
-		<< WCString{L"wide-c"} << ' '
+		<< CString{"c"} << " "
+		<< String{"owned"} << " "
+		<< WCString{L"wide-c"} << " "
 		<< WString{L"wide-owned"} << std::endl;
 	ASSERT_EQUAL("test_string_payload", "Info    : c owned wide-c wide-owned\n", output.str());
 	RETURN_TEST("test_string_payload", result);
@@ -835,8 +835,8 @@ int test_safe_optional_vector_and_map_payloads() {
 	});
 	const StormByte::Safe::Vector<int> empty_sequence{};
 	const StormByte::Safe::Map<String, String> empty_entries{};
-	log << Level::Info << present << ' ' << empty << ' ' << sequence << ' ' << entries
-		<< ' ' << empty_sequence << ' ' << empty_entries << std::endl;
+	log << Level::Info << present << " " << empty << " " << sequence << " " << entries
+		<< " " << empty_sequence << " " << empty_entries << std::endl;
 	const std::string expected =
 		"Info    : 42 (empty Safe::Optional) [42, (empty Safe::Optional)] {\n"
 		"\talpha: one\n\tbeta: two\n} [] {}\n";

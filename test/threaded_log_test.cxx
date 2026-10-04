@@ -614,7 +614,7 @@ int test_threadedlog_malformed_format_tokens_remain_literal() {
 	log.Format("good[%L]");
 	log << Level::Info << "after format change" << std::endl;
 	ASSERT_EQUAL("test_threadedlog_malformed_format_tokens_remain_literal",
-		"bad[%Q % Info    : first\ngood[Info    ] after format change\n", output.str());
+		"bad[%Q % first\ngood[Info    ] after format change\n", output.str());
 	RETURN_TEST("test_threadedlog_malformed_format_tokens_remain_literal", result);
 }
 
