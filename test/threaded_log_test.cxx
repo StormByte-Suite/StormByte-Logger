@@ -44,6 +44,7 @@
 #include <StormByte/safe/cstring.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
+#include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/test_handlers.h>
 
@@ -62,7 +63,41 @@
 
 using namespace StormByte::Logger;
 
+static_assert(StormByte::Type::MaybeSafe<ThrottleSpec>);
+static_assert(StormByte::Type::MaybeSafe<GroupManip>);
+static_assert(StormByte::Type::MaybeSafe<ComponentManip>);
+static_assert(StormByte::Type::MaybeSafe<FormatManip>);
+static_assert(StormByte::Type::MaybeSafe<ColorManip>);
+static_assert(StormByte::Type::MaybeSafe<ThreadedLog>);
+static_assert(StormByte::Type::MaybeSafe<StormByte::Logger::Exception>);
+static_assert(StormByte::Type::MaybeSafe<StormByte::Logger::ThrottleError>);
+static_assert(StormByte::Type::MaybeSafe<SinkFunction>);
+static_assert(StormByte::Type::IsSafe<StormByte::Safe::Optional<Level>>::value);
+
 namespace {
+	struct SinkFunctionContext {
+		std::string* output;
+		int* releases;
+		bool fail_once;
+	};
+
+	StormByte::Safe::Status CaptureSinkFunction(void* context, const StormByte::Safe::String& text) {
+		auto& sink = *static_cast<SinkFunctionContext*>(context);
+		const std::string_view view = static_cast<std::string_view>(text);
+		if (sink.fail_once && view == "failure") {
+			sink.fail_once = false;
+			throw StormByte::Logger::Exception("sink failure");
+		}
+		sink.output->append(view);
+		return StormByte::Safe::Status::Success;
+	}
+
+	void ReleaseSinkFunction(void* context) noexcept {
+		auto* sink = static_cast<SinkFunctionContext*>(context);
+		++*sink->releases;
+		delete sink;
+	}
+
 	void IsolateLine(Log& log) {
 		if (!log.Enabled(Level::LowLevel))
 			log << Level::LowLevel << std::endl;
@@ -98,6 +133,52 @@ int test_threadedlog_basic() {
 	tlog << Level::Info << "Threaded basic message" << std::endl;
 	ASSERT_EQUAL("test_threadedlog_basic", std::string("Info    : Threaded basic message\n"), output.str());
 	RETURN_TEST("test_threadedlog_basic", result);
+}
+
+int test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues() {
+	int result = 0;
+	std::string output;
+	int releases = 0;
+	{
+		SinkFunction callback{
+			new SinkFunctionContext{&output, &releases, true},
+			&CaptureSinkFunction,
+			&ReleaseSinkFunction
+		};
+		ThreadedLog log(std::move(callback), Level::Info, "%L:");
+		log << Level::Info << "failure" << std::endl;
+		std::thread next([&] { log << Level::Info << "after" << std::endl; });
+		next.join();
+	}
+	ASSERT_EQUAL("test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues",
+		"Info    : \nInfo    : after\n", output);
+	ASSERT_EQUAL("test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues (release)", 1, releases);
+	RETURN_TEST("test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues", result);
+}
+
+int test_threadedlog_throttle_error_releases_open_line_lock() {
+	int result = 0;
+	std::ostringstream output;
+	ThreadedLog log(output, Level::Info, "%L:");
+	log << Level::Info << "partial";
+	bool caught_logger_exception = false;
+	try {
+		log.Throttle(-1.0, 1);
+	} catch (const ThrottleError&) {
+		caught_logger_exception = true;
+	}
+	std::thread next([&] { log << Level::Fatal << "after" << std::endl; });
+	const auto ready = std::async(std::launch::async, [&next] { next.join(); });
+	const bool completed = ready.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+	if (!completed) {
+		log << std::endl;
+		ready.wait();
+	}
+	log << std::endl;
+	ASSERT_TRUE("test_threadedlog_throttle_error_releases_open_line_lock (exception)", caught_logger_exception);
+	ASSERT_TRUE("test_threadedlog_throttle_error_releases_open_line_lock (worker)", completed);
+	ASSERT_TRUE("test_threadedlog_throttle_error_releases_open_line_lock (output)", output.str().find("Fatal   : after\n") != std::string::npos);
+	RETURN_TEST("test_threadedlog_throttle_error_releases_open_line_lock", result);
 }
 
 // -------------------
@@ -987,6 +1068,8 @@ int main() {
 	result += test_smart_pointer_usage();
 	result += test_shared_unwraps_without_dereference();
 	result += test_threadedlog_basic();
+	result += test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_continues();
+	result += test_threadedlog_throttle_error_releases_open_line_lock();
 
 	// -------------------
 	// Binary span

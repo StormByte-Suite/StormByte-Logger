@@ -308,6 +308,11 @@ Engine::Engine(StormByte::Safe::Callback&& callback, const Level& level, const s
 	m_callback.emplace(std::move(callback));
 }
 
+Engine::Engine(SinkFunction&& callback, const Level& level, const std::string& format):
+	Engine(nullptr, nullptr, nullptr, level, format) {
+	m_function.emplace(std::move(callback));
+}
+
 Engine::~Engine() noexcept {
 	reset_color();
 }
@@ -668,7 +673,10 @@ Engine& Engine::operator<<(ColorManip manip) noexcept {
 	if (!Enabled())
 		return *this;
 	m_content_nocolor = false;
-	m_content_color = manip.value;
+	if (manip.value)
+		m_content_color = manip.value.value();
+	else
+		m_content_color.reset();
 	if (t_line.header_displayed)
 		sync_content_color();
 	return *this;

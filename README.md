@@ -185,6 +185,10 @@ log << Level::Info << "Hola" << std::endl;
 
 `Log` and `ThreadedLog` accept any `std::ostream` (`std::cout`, a file stream, a string stream). The stream must outlive the logger. The DLL never calls into that stream: each write and each manipulator (`std::endl`, `std::flush`, …) jumps back to `OStreamWrite` / `OStreamManip`, which are compiled into the module that constructed the logger.
 
+For a custom sink that crosses a DLL boundary, use `SinkFunction` (`StormByte::Safe::Function<void(const StormByte::Safe::String&)>`) instead of passing an owning `std::function` or a raw callback context. Its context is released by the creator module. Sink invocation is part of a `noexcept` output path: callback failures do not escape the logging operator. `StormByte::Exception` may be thrown by a callback and is contained; other callback exceptions become `StormByte::Status::Failure` in `Safe::Function`.
+
+Public logger facades and manipulators that carry Base-owned fields are declared `MaybeSafe`; optional fields use `StormByte::Safe::Optional` rather than `std::optional` across the module boundary.
+
 Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::BinaryData`, `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Safe::CString`, `StormByte::Safe::WCString`, `StormByte::Size`, `StormByte::ByteSize`. The inline `std::string` overload passes a view during the call; Logger copies its bytes into the line buffer synchronously. `std::wstring` converts to the wide view. `std::vector<std::byte>` converts to the span. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned Base text type.
 
 ### A line

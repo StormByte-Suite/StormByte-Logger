@@ -42,6 +42,7 @@
 
 #include <StormByte/exception.hxx>
 #include <StormByte/logger/visibility.h>
+#include <StormByte/type_traits/safe.hxx>
 
 #include <format>
 #include <string>
@@ -106,3 +107,6 @@ namespace StormByte::Logger {
 			~ThrottleError() noexcept override;
 	};
 }
+
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::Exception);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::ThrottleError);

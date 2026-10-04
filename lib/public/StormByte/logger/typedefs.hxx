@@ -41,6 +41,8 @@
 #pragma once
 
 #include <StormByte/logger/visibility.h>
+#include <StormByte/safe/function.hxx>
+#include <StormByte/safe/string.hxx>
 
 #include <ostream>
 
@@ -126,4 +128,9 @@ namespace StormByte::Logger {
 	 * in the module that owns the stream.
 	 */
 	using SinkManip = void (*)(void* context, std::ostream& (*manip)(std::ostream&));
+
+	/**
+	 * @brief Typed text callback whose context is released in its creator module.
+	 */
+	using SinkFunction = StormByte::Safe::Function<void(const StormByte::Safe::String&)>;
 }

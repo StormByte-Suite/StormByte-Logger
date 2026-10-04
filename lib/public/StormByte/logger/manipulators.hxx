@@ -44,9 +44,9 @@
 #include <StormByte/logger/visibility.h>
 #include <StormByte/safe/optional.hxx>
 #include <StormByte/safe/string.hxx>
+#include <StormByte/type_traits/safe.hxx>
 
 #include <cstddef>
-#include <optional>
 #include <string_view>
 
 /**
@@ -75,7 +75,7 @@ namespace StormByte::Logger {
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC ThrottleSpec {
 		StormByte::Safe::Optional<StormByte::Safe::String> Component; ///< Optional component selector.
-		std::optional<StormByte::Logger::Level> Level; ///< Optional level selector.
+		StormByte::Safe::Optional<StormByte::Logger::Level> Level; ///< Optional level selector.
 		StormByte::Safe::Optional<StormByte::Safe::String> Group;		///< Optional group selector.
 		double Rate = 0.0;									///< Lines per second; zero disables refill.
 		std::size_t Burst = 0;								///< Initial and maximum token capacity.
@@ -207,7 +207,7 @@ namespace StormByte::Logger {
 	 * @brief Temporarily selects a configured or explicit content color.
 	 */
 	struct STORMBYTE_LOGGER_PUBLIC ColorManip {
-		std::optional<Color> value; ///< Explicit color, or empty for the configured level color.
+		StormByte::Safe::Optional<Color> value; ///< Explicit color, or empty for the configured level color.
 
 		/**
 		 * @brief Select an explicit color for subsequent content.
@@ -222,7 +222,7 @@ namespace StormByte::Logger {
 	/**
 	 * @brief Restore the configured color for the current level.
 	 */
-	inline constexpr ColorManip color{};
+	inline const ColorManip color{};
 
 	/**
 	 * @struct NoColorManip
@@ -361,3 +361,16 @@ namespace StormByte::Logger {
 	 */
 	STORMBYTE_LOGGER_PUBLIC Log& noredact(Log& log) noexcept;
 }
+
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::ThrottleSpec);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::GroupManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::ComponentManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::ResetComponentManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::PopComponentManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::FormatManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::PopFormatManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::ColorManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::NoColorManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::RedactManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::HexManip);
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::NoHexManip);

@@ -52,6 +52,7 @@
 #include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
 #include <StormByte/type_traits.hxx>
+#include <StormByte/type_traits/safe.hxx>
 
 #include <cstddef>
 #include <memory>
@@ -140,6 +141,14 @@ namespace StormByte::Logger {
 			 * @param format Header format: %L level, %T timestamp, %i thread id, %c component, %g group, %% literal %.
 			 */
 			Log(StormByte::Safe::Callback&& callback, const Level& level = Level::Info, std::string_view format = "[%L] %T");
+
+			/**
+			 * @brief Construct a Log that emits through a typed creator-owned callback.
+			 * @param callback Sink receiving each emitted text segment.
+			 * @param level Minimum Level that will be emitted.
+			 * @param format Header format string.
+			 */
+			Log(SinkFunction&& callback, const Level& level = Level::Info, std::string_view format = "[%L] %T");
 
 			/**
 			 * @brief Copy constructor.
@@ -932,3 +941,5 @@ namespace StormByte::Logger {
 		return logger;
 	}
 }
+
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::Log);

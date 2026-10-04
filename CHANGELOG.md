@@ -20,12 +20,15 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte-Logger/blob/master/README.md)
 - License: dual license LGPL-3.0-or-later or commercial, [LICENSE](https://github.com/StormBytePP/StormByte-Logger/blob/master/LICENSE)
 
+## [Unreleased]
+
 [Unreleased]: https://github.com/StormBytePP/StormByte-Logger/compare/2.0.0...HEAD
 
 ## [2.0.0] - 2026-10-04
 
 ### Added
 
+- `SinkFunction`, a `StormByte::Safe::Function` sink for `Log` and `ThreadedLog`; its callback context is released in the creator module.
 - `operator<<` on `Log` and `ThreadedLog` for `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Safe::CString`, `StormByte::Safe::WCString` and `StormByte::Size`. Conversion and copy run only when `WillWrite()` is true.
 - `component`, `group` and `push_format` accept `std::string_view` (literals) in the caller and `StormByte::Safe::String` by value at the DLL boundary. Manipulator payloads use Base-owned text.
 - Private `StormByte::Logger::Detail` human-readable number and IEC byte formatting (the manipulator API is unchanged; this logic no longer lives in String).
@@ -36,6 +39,9 @@ If you landed here from a release link and have not read the tree:
 
 ### Changed
 
+- Public optional fields in `ThrottleSpec` and `ColorManip` use `StormByte::Safe::Optional`; public logger facades and manipulators declare their conditional DLL-safety with `MaybeSafe`.
+- `ThreadedLog` serializes configuration queries and updates with its shared line lock. Failures release the lock, preserve StormByte exceptions and translate foreign exceptions to `Logger::Exception`.
+- Caller sinks are contained in `noexcept` output paths; typed callback sinks also receive header separator bytes.
 - Logger's text API and build metadata now use StormByte Base 2.0.0 directly; owned text and clone owners use Base's `StormByte::Safe` types.
 - Shared vs static follows CMake `BUILD_SHARED_LIBS` (declared in the project root, default ON). There is no `STORMBYTE_LOGGER_SHARED` CMake option. When the library is shared, the compile definition `STORMBYTE_LOGGER_SHARED` is still set so `visibility.h` can distinguish `dllexport` / `dllimport` / static. CI passes `-DBUILD_SHARED_LIBS=ON`. Vendored StormByte Base follows the same `BUILD_SHARED_LIBS` mode.
 - **Breaking:** Logger vendors [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) directly and exposes Base's `StormByte::Safe` owned-text and ownership types in its public API.
@@ -56,6 +62,7 @@ If you landed here from a release link and have not read the tree:
 
 ### Fixed
 
+- Prevent a sink callback failure from terminating the process through a `noexcept` write path, and prevent `ThreadedLog` configuration failures from leaving the line lock held.
 - Qualify the `ThrottleSpec::Level` member type so public headers compile with GCC 14+ without `-Wchanges-meaning`; the `Level` field and designated-initializer API remain unchanged.
 
 [2.0.0]: https://github.com/StormBytePP/StormByte-Logger/compare/1.2.0...2.0.0

@@ -47,6 +47,7 @@
 #include <ostream>
 #include <span>
 #include <string_view>
+#include <StormByte/type_traits/safe.hxx>
 
 /**
  * @namespace StormByte::Logger
@@ -85,6 +86,14 @@ namespace StormByte::Logger {
 			 * @param format Header format string.
 			 */
 			ThreadedLog(StormByte::Safe::Callback&& callback, const Level& level = Level::Info, std::string_view format = "[%L] %T");
+
+			/**
+			 * @brief Construct a ThreadedLog that emits through a typed creator-owned callback.
+			 * @param callback Sink receiving each emitted text segment.
+			 * @param level Minimum Level that will be emitted.
+			 * @param format Header format string.
+			 */
+			ThreadedLog(SinkFunction&& callback, const Level& level = Level::Info, std::string_view format = "[%L] %T");
 
 			/**
 			 * @brief Copy constructor.
@@ -410,3 +419,5 @@ namespace StormByte::Logger {
 			StormByte::Safe::Shared<ThreadLock> m_lock;	///< Shared line lock on Base's heap (copy and Scope share it)
 	};
 }
+
+STORMBYTE_DECLARE_MAYBE_SAFE(StormByte::Logger::ThreadedLog);

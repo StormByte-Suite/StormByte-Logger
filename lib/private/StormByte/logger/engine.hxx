@@ -46,6 +46,7 @@
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/safe/callback.hxx>
+#include <StormByte/safe/function.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wstring.hxx>
@@ -142,6 +143,14 @@ namespace StormByte::Logger {
 			 * @param format Header format string (%L, %T, %i, %c, %g, %%).
 			 */
 			Engine(StormByte::Safe::Callback&& callback, const Level& level = Level::Info, const std::string& format = "[%L] %T");
+
+			/**
+			 * @brief Construct an internal logger using a typed text callback.
+			 * @param callback Callback receiving each emitted text segment.
+			 * @param level Initial minimum Level that will be emitted.
+			 * @param format Header format string (%L, %T, %i, %c, %g, %%).
+			 */
+			Engine(SinkFunction&& callback, const Level& level = Level::Info, const std::string& format = "[%L] %T");
 
 			Engine(const Engine&) = delete;
 
@@ -508,8 +517,20 @@ namespace StormByte::Logger {
 					}
 					return;
 				}
-				if (m_write != nullptr)
-					m_write(m_context, text.data(), text.size());
+				if (m_function) {
+					try {
+						const StormByte::Safe::String owned{text};
+						(void)m_function->Call(owned);
+					} catch (...) {
+					}
+					return;
+				}
+				if (m_write != nullptr) {
+					try {
+						m_write(m_context, text.data(), text.size());
+					} catch (...) {
+					}
+				}
 			}
 
 			/**
@@ -517,9 +538,17 @@ namespace StormByte::Logger {
 			 * @param c Byte to write.
 			 */
 			void sink_char(char c) const noexcept {
-				if (m_write == nullptr)
+				if (m_callback || m_function) {
+					const std::string_view text{&c, 1};
+					sink_write(text);
 					return;
-				m_write(m_context, &c, 1);
+				}
+				if (m_write != nullptr) {
+					try {
+						m_write(m_context, &c, 1);
+					} catch (...) {
+					}
+				}
 			}
 
 			/**
@@ -529,7 +558,7 @@ namespace StormByte::Logger {
 			void sink_manip(std::ostream& (*manip)(std::ostream&)) const noexcept {
 				if (manip == nullptr)
 					return;
-				if (m_callback) {
+				if (m_callback || m_function) {
 					try {
 						std::ostringstream output;
 						manip(output);
@@ -540,14 +569,19 @@ namespace StormByte::Logger {
 					}
 					return;
 				}
-				if (m_manip != nullptr)
-				m_manip(m_context, manip);
+				if (m_manip != nullptr) {
+					try {
+						m_manip(m_context, manip);
+					} catch (...) {
+					}
+				}
 			}
 
 			SinkWrite m_write = nullptr;									///< Caller write callback
 			SinkManip m_manip = nullptr;									///< Caller manipulator callback
 			void* m_context = nullptr;									///< Opaque sink, not owned
 			std::optional<StormByte::Safe::Callback> m_callback;						///< Owned Base callback sink, when configured
+				std::optional<SinkFunction> m_function;							///< Typed callback released in its creator module
 			Level m_print_level;										///< Minimum level that will be printed
 			std::optional<Level> m_current_level;								///< Level of the current message
 			std::atomic<bool> m_enabled;									///< Whether the current level is enabled

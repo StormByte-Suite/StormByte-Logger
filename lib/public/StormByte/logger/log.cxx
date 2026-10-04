@@ -118,6 +118,10 @@ Log::Log(StormByte::Safe::Callback&& callback, const Level& level, std::string_v
 	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(std::move(callback), level, std::string{format});
 }
 
+Log::Log(SinkFunction&& callback, const Level& level, std::string_view format) {
+	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(std::move(callback), level, std::string{format});
+}
+
 Log::PointerType Log::Clone() const {
 	return PointerType::MakePointer<Log>(*this);
 }
