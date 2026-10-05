@@ -19,8 +19,8 @@
  * Both licenses apply only to original StormByte-Logger source in this
  * repository. They do not cover other StormByte modules or any third-party
  * material shipped with this repository (including everything under
- * thirdparty/, and in particular the bundled StormByte-String tree and
- * the StormByte Base tree it vendors), which remains under its own license.
+ * thirdparty/, in particular the bundled StormByte Base tree), which remains
+ * under its own license.
  *
  * Neither license grants any patent rights. Any patent licenses required
  * to use this software or third-party components must be obtained separately
@@ -72,17 +72,37 @@ using StormByte::Safe::WString;
 using namespace StormByte::Logger;
 
 namespace {
+	struct LogTextContext {
+		std::string* output;
+	};
+
 	StormByte::Safe::Status CaptureLogText(void* context, const String& text) noexcept {
 		try {
-			static_cast<std::string*>(context)->append(static_cast<std::string_view>(text));
+			static_cast<LogTextContext*>(context)->output->append(static_cast<std::string_view>(text));
 			return StormByte::Safe::Status::Success;
 		} catch (...) {
 			return StormByte::Safe::Status::Failure;
 		}
 	}
 
+	void* CloneLogTextContext(const void* context) noexcept {
+		try {
+			auto clone = std::make_unique<LogTextContext>(*static_cast<const LogTextContext*>(context));
+			return clone.release();
+		} catch (...) {
+			return nullptr;
+		}
+	}
+
 	void ReleaseLogText(void* context) noexcept {
-		delete static_cast<std::string*>(context);
+		delete static_cast<LogTextContext*>(context);
+	}
+
+	Callback CreateLogTextCallback(std::string& output) {
+		auto context = std::make_unique<LogTextContext>(LogTextContext{&output});
+		Callback callback{context.get(), &CaptureLogText, &CloneLogTextContext, &ReleaseLogText};
+		context.release();
+		return callback;
 	}
 
 	void IsolateLine(Log& log) {
@@ -156,21 +176,17 @@ int test_safe_callback_sink() {
 	int result = 0;
 	std::string log_output;
 	{
-		auto* context = new std::string;
-		Log log(Callback{context, &CaptureLogText, &ReleaseLogText}, Level::Info, "%L:");
+		Log log(CreateLogTextCallback(log_output), Level::Info, "%L:");
 		IsolateLine(log);
 		log << Level::Info << "Log callback" << std::endl;
-		log_output = *context;
 	}
 	ASSERT_EQUAL("test_safe_callback_sink_log", "Info    : Log callback\n", log_output);
 
 	std::string threaded_output;
 	{
-		auto* context = new std::string;
-		ThreadedLog log(Callback{context, &CaptureLogText, &ReleaseLogText}, Level::Info, "%L:");
+		ThreadedLog log(CreateLogTextCallback(threaded_output), Level::Info, "%L:");
 		IsolateLine(log);
 		log << Level::Info << "Threaded callback" << std::endl;
-		threaded_output = *context;
 	}
 	ASSERT_EQUAL("test_safe_callback_sink_threaded", "Info    : Threaded callback\n", threaded_output);
 	RETURN_TEST("test_safe_callback_sink", result);

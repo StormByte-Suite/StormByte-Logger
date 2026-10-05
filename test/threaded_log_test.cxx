@@ -19,8 +19,8 @@
  * Both licenses apply only to original StormByte-Logger source in this
  * repository. They do not cover other StormByte modules or any third-party
  * material shipped with this repository (including everything under
- * thirdparty/, and in particular the bundled StormByte-String tree and
- * the StormByte Base tree it vendors), which remains under its own license.
+ * thirdparty/, in particular the bundled StormByte Base tree), which remains
+ * under its own license.
  *
  * Neither license grants any patent rights. Any patent licenses required
  * to use this software or third-party components must be obtained separately
@@ -124,6 +124,11 @@ namespace {
 		return StormByte::Safe::Status::Success;
 	}
 
+	void* CloneCrossLoggerContext(const void*) noexcept {
+		// Promise-backed synchronization state is deliberately non-cloneable.
+		return nullptr;
+	}
+
 	void ReleaseCrossLoggerContext(void*) noexcept {}
 
 	StormByte::Safe::Status CaptureSinkFunction(void* context, const StormByte::Safe::String& text) {
@@ -139,6 +144,15 @@ namespace {
 		}
 		sink.output->append(view);
 		return StormByte::Safe::Status::Success;
+	}
+
+	void* CloneSinkFunctionContext(const void* context) noexcept {
+		try {
+			auto clone = std::make_unique<SinkFunctionContext>(*static_cast<const SinkFunctionContext*>(context));
+			return clone.release();
+		} catch (...) {
+			return nullptr;
+		}
 	}
 
 	void ReleaseSinkFunction(void* context) noexcept {
@@ -192,6 +206,7 @@ int test_threadedlog_safe_function_crosses_dll_contains_logger_exception_and_con
 		SinkFunction callback{
 			new SinkFunctionContext{&output, &releases, true, true},
 			&CaptureSinkFunction,
+			&CloneSinkFunctionContext,
 			&ReleaseSinkFunction
 		};
 		ThreadedLog log(std::move(callback), Level::Info, "%L:");
@@ -215,7 +230,7 @@ int test_threadedlog_nested_instances_keep_distinct_locks() {
 	context.release_first = release_first.get_future().share();
 	auto first_call = context.first_call.get_future();
 	auto concurrent_call = context.concurrent_call.get_future();
-	SinkFunction callback{&context, &BlockFirstSinkCall, &ReleaseCrossLoggerContext};
+	SinkFunction callback{&context, &BlockFirstSinkCall, &CloneCrossLoggerContext, &ReleaseCrossLoggerContext};
 	ThreadedLog second(std::move(callback), Level::Info, "%L:");
 	std::thread owner([&] {
 		first << Level::Info << "held";
