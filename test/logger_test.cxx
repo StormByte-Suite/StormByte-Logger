@@ -41,7 +41,7 @@
 #include <StormByte/base64.hxx>
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
-#include <StormByte/safe/cstring.hxx>
+#include <StormByte/safe/string.hxx>
 #include <StormByte/safe/map.hxx>
 #include <StormByte/safe/optional.hxx>
 #include <StormByte/exception.hxx>
@@ -49,8 +49,6 @@
 #include <StormByte/logger/log.hxx>
 #include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/safe/string.hxx>
-#include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
 #include <StormByte/safe/vector.hxx>
 #include <StormByte/test_handlers.h>
@@ -68,9 +66,7 @@
 using StormByte::BinaryData;
 using StormByte::ByteSize;
 using StormByte::Safe::Callback;
-using StormByte::Safe::CString;
 using StormByte::Size;
-using StormByte::Safe::WCString;
 using StormByte::Safe::String;
 using StormByte::Safe::WString;
 using namespace StormByte::Logger;
@@ -759,14 +755,14 @@ int test_nohumanreadable() {
 // Payload
 // -------------------
 
-int test_cstring_payload() {
+int test_owned_string_payload() {
 	int result = 0;
 	std::ostringstream output;
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
-	log << Level::Info << CString{"cstring"} << std::endl;
-	ASSERT_EQUAL("test_cstring_payload", "Info    : cstring\n", output.str());
-	RETURN_TEST("test_cstring_payload", result);
+	log << Level::Info << String{"cstring"} << std::endl;
+	ASSERT_EQUAL("test_owned_string_payload", "Info    : cstring\n", output.str());
+	RETURN_TEST("test_owned_string_payload", result);
 }
 
 int test_filtered_owned_text_is_dropped() {
@@ -775,9 +771,7 @@ int test_filtered_owned_text_is_dropped() {
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
 	log << Level::Debug << String{"hidden"} << std::endl;
-	log << Level::Debug << CString{"hidden"} << std::endl;
 	log << Level::Debug << WString{L"hidden"} << std::endl;
-	log << Level::Debug << WCString{L"hidden"} << std::endl;
 	log << Level::Debug << Size{1024} << std::endl;
 	ASSERT_EQUAL("test_filtered_owned_text_is_dropped", std::string{}, output.str());
 	RETURN_TEST("test_filtered_owned_text_is_dropped", result);
@@ -813,9 +807,9 @@ int test_string_payload() {
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
 	log << Level::Info
-		<< CString{"c"} << " "
+		<< String{"c"} << " "
 		<< String{"owned"} << " "
-		<< WCString{L"wide-c"} << " "
+		<< WString{L"wide-c"} << " "
 		<< WString{L"wide-owned"} << std::endl;
 	ASSERT_EQUAL("test_string_payload", "Info    : c owned wide-c wide-owned\n", output.str());
 	RETURN_TEST("test_string_payload", result);
@@ -859,14 +853,14 @@ int test_string_view_and_wstring_view_payloads() {
 	RETURN_TEST("test_string_view_and_wstring_view_payloads", result);
 }
 
-int test_wcstring_payload() {
+int test_wstring_payload_from_c_string() {
 	int result = 0;
 	std::ostringstream output;
 	Log log(output, Level::Info, "%L:");
 	IsolateLine(log);
-	log << Level::Info << WCString{L"wide-c"} << std::endl;
-	ASSERT_EQUAL("test_wcstring_payload", "Info    : wide-c\n", output.str());
-	RETURN_TEST("test_wcstring_payload", result);
+	log << Level::Info << WString{L"wide-c"} << std::endl;
+	ASSERT_EQUAL("test_wstring_payload_from_c_string", "Info    : wide-c\n", output.str());
+	RETURN_TEST("test_wstring_payload_from_c_string", result);
 }
 
 int test_wstring_payload() {
@@ -1472,14 +1466,14 @@ int main() {
 	// -------------------
 	// Payload
 	// -------------------
-	result += test_cstring_payload();
+	result += test_owned_string_payload();
 	result += test_filtered_owned_text_is_dropped();
 	result += test_size_payload();
 	result += test_bytesize_payload();
 	result += test_string_payload();
 	result += test_safe_optional_vector_and_map_payloads();
 	result += test_string_view_and_wstring_view_payloads();
-	result += test_wcstring_payload();
+	result += test_wstring_payload_from_c_string();
 	result += test_wstring_payload();
 	result += test_every_accepted_payload();
 	result += test_pointer_owners_stream();

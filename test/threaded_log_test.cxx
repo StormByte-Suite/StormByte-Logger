@@ -41,7 +41,8 @@
 #include <StormByte/base64.hxx>
 #include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
-#include <StormByte/safe/cstring.hxx>
+#include <StormByte/safe/string.hxx>
+#include <StormByte/safe/wstring.hxx>
 #include <StormByte/safe/map.hxx>
 #include <StormByte/safe/optional.hxx>
 #include <StormByte/size.hxx>
@@ -84,8 +85,6 @@ static_assert(!StormByte::Type::IsSafe<SinkFunction>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::BinaryData>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::Safe::String>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::Safe::WString>::value);
-static_assert(StormByte::Type::IsSafe<StormByte::Safe::CString>::value);
-static_assert(StormByte::Type::IsSafe<StormByte::Safe::WCString>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::Safe::Optional<Level>>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::Safe::Vector<StormByte::Safe::String>>::value);
 static_assert(StormByte::Type::IsSafe<StormByte::Safe::Map<StormByte::Safe::String, StormByte::Safe::String>>::value);
@@ -334,9 +333,9 @@ int test_threadedlog_every_accepted_payload() {
 	std::ostringstream output;
 	ThreadedLog log(output, Level::Info, "%L:");
 	const StormByte::Safe::String owned{"owned"};
-	const StormByte::Safe::CString bytes{"c"};
+	const StormByte::Safe::String bytes{"c"};
 	const StormByte::Safe::WString wide_owned{L"wide-owned"};
-	const StormByte::Safe::WCString wide_bytes{L"wide-c"};
+	const StormByte::Safe::WString wide_bytes{L"wide-c"};
 	const std::string narrow_text{"string"};
 	const char* literal_text = "literal";
 	const StormByte::Size count{3};

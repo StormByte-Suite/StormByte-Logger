@@ -26,7 +26,7 @@ else {
 }
 ```
 
-Pointers and references bind to the type: `const char* str`, `CString& other`, `operator const char*()`. Not `char *str`.
+Pointers and references bind to the type: `const char* str`, `StormByte::Safe::String& other`, `operator const char*()`. Not `char *str`.
 
 Types, enumerations and functions are PascalCase (`WriteValue`, `BeginPayload`, `Level`). Macros are `SCREAMING_SNAKE` (`STORMBYTE_LOGGER_PUBLIC`, `WINDOWS`). One statement per line.
 
@@ -70,11 +70,11 @@ template STORMBYTE_LOGGER_INSTANTIATE void Log::WriteValue<int>(const int& v);
 
 Do not repeat `STORMBYTE_LOGGER_PUBLIC` on an ordinary `.cxx` definition. Private implementation types use `STORMBYTE_LOGGER_PRIVATE`.
 
-Values that leave the shared library are `StormByte::String::String`, `StormByte::String::WString`, `CString`, `WCString`, `Size`, or a `const char*` owned by this library. Do not return `std::string` as the object that crosses the boundary. `std::string_view` over an owned buffer is only valid inside the same module.
+Values that leave the shared library are `StormByte::Safe::String`, `StormByte::Safe::WString`, `Size`, or a `const char*` owned by this library. Do not return `std::string` as the object that crosses the boundary. `std::string_view` over an owned buffer is only valid inside the same module.
 
 ## Doxygen
 
-Document every public declaration except `= delete`. Namespaces in a header get a `@namespace` block. Large classes use `@name` groups. `@ref` uses the qualified name (`StormByte::String::String`, `StormByte::CString`). Align member `///<` comments to the same column when they fit.
+Document every public declaration except `= delete`. Namespaces in a header get a `@namespace` block. Large classes use `@name` groups. `@ref` uses the qualified name (`StormByte::Safe::String`, `StormByte::Safe::WString`). Align member `///<` comments to the same column when they fit.
 
 Wrap `extern template` noise in `/// @cond` / `/// @endcond` so it does not show up as a page of instantiations.
 

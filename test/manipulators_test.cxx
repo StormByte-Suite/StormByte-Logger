@@ -38,22 +38,20 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
-#include <StormByte/safe/cstring.hxx>
+#include <StormByte/safe/string.hxx>
 #include <StormByte/logger/exception.hxx>
 #include <StormByte/logger/log.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/safe/string.hxx>
-#include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
 #include <StormByte/test_handlers.h>
 
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
-using StormByte::Safe::CString;
-using StormByte::Safe::WCString;
 using StormByte::Safe::String;
 using StormByte::Safe::WString;
 using namespace StormByte::Logger;
@@ -280,13 +278,13 @@ int test_manip_redact_const_char_ptr() {
 	RETURN_TEST("test_manip_redact_const_char_ptr", result);
 }
 
-int test_manip_redact_cstring() {
+int test_manip_redact_owned_string() {
 	int result = 0;
 	std::ostringstream output;
 	Log log(output, Level::Info, "%L:");
-	log << Level::Info << redact << CString{"secret"} << std::endl;
-	ASSERT_EQUAL("test_manip_redact_cstring", "Info    : ******\n", output.str());
-	RETURN_TEST("test_manip_redact_cstring", result);
+	log << Level::Info << redact << String{"secret"} << std::endl;
+	ASSERT_EQUAL("test_manip_redact_owned_string", "Info    : ******\n", output.str());
+	RETURN_TEST("test_manip_redact_owned_string", result);
 }
 
 int test_manip_redact_empty_string() {
@@ -422,13 +420,13 @@ int test_manip_redact_threadedlog() {
 	RETURN_TEST("test_manip_redact_threadedlog", result);
 }
 
-int test_manip_redact_wcstring() {
+int test_manip_redact_owned_wstring() {
 	int result = 0;
 	std::ostringstream output;
 	Log log(output, Level::Info, "%L:");
-	log << Level::Info << redact << WCString{L"secret"} << std::endl;
-	ASSERT_EQUAL("test_manip_redact_wcstring", "Info    : ******\n", output.str());
-	RETURN_TEST("test_manip_redact_wcstring", result);
+	log << Level::Info << redact << WString{L"secret"} << std::endl;
+	ASSERT_EQUAL("test_manip_redact_owned_wstring", "Info    : ******\n", output.str());
+	RETURN_TEST("test_manip_redact_owned_wstring", result);
 }
 
 int test_manip_redact_with_humanreadable_independent() {
@@ -458,6 +456,26 @@ int test_manip_redact_wstring_owned() {
 	log << Level::Info << redact << WString{L"secret"} << std::endl;
 	ASSERT_EQUAL("test_manip_redact_wstring_owned", "Info    : ******\n", output.str());
 	RETURN_TEST("test_manip_redact_wstring_owned", result);
+}
+
+int test_owned_text_preserves_embedded_nulls() {
+	int result = 0;
+	const std::string_view narrow_view{"A\0B", 3};
+	const std::wstring_view wide_view{L"C\0D", 3};
+	const String narrow{narrow_view};
+	const WString wide{wide_view};
+	const std::string expected{"Info    : A\0B|C\0D\n", 18};
+
+	std::ostringstream output;
+	Log log(output, Level::Info, "%L:");
+	log << Level::Info << narrow << "|" << wide << std::endl;
+	ASSERT_EQUAL("test_owned_text_preserves_embedded_nulls_log", expected, output.str());
+
+	std::ostringstream threaded_output;
+	ThreadedLog threaded_log(threaded_output, Level::Info, "%L:");
+	threaded_log << Level::Info << narrow << "|" << wide << std::endl;
+	ASSERT_EQUAL("test_owned_text_preserves_embedded_nulls_threaded", expected, threaded_output.str());
+	RETURN_TEST("test_owned_text_preserves_embedded_nulls", result);
 }
 
 // -------------------
@@ -569,7 +587,7 @@ int main() {
 	result += test_manip_noredact_restores_plain();
 	result += test_manip_redact_affects_numbers();
 	result += test_manip_redact_const_char_ptr();
-	result += test_manip_redact_cstring();
+	result += test_manip_redact_owned_string();
 	result += test_manip_redact_empty_string();
 	result += test_manip_redact_first();
 	result += test_manip_redact_first_const_char_ptr();
@@ -584,10 +602,11 @@ int main() {
 	result += test_manip_redact_string();
 	result += test_manip_redact_then_change_keep();
 	result += test_manip_redact_threadedlog();
-	result += test_manip_redact_wcstring();
+	result += test_manip_redact_owned_wstring();
 	result += test_manip_redact_with_humanreadable_independent();
 	result += test_manip_redact_wstring();
 	result += test_manip_redact_wstring_owned();
+	result += test_owned_text_preserves_embedded_nulls();
 
 	// -------------------
 	// Throttle

@@ -9,7 +9,7 @@
 
 This repository is **StormByte Logger**: stream logging for the StormByte C++ suite.
 
-It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Safe::CString` / `WCString`, `StormByte::Size`).
+It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Size`).
 
 The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedia, Network and System are **other repositories**. This one does not implement them.
 
@@ -26,8 +26,8 @@ The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedi
 - **Human-readable** — `humanreadable_number`, `humanreadable_bytes`, `nohumanreadable`. Formatting lives in Logger (`Detail`).
 - **Redaction** — `redact` / `redact(N)` keep last N, `redact_first(N)` keep first N, `noredact`.
 - **Hex** — `hex` / `hex(N)` dumps text payloads as `0xAA` with N bytes per row (default 16). `nohex` restores the default. Applies to every subsequent text payload, including numbers (text bytes, not numeric hex). Binary payloads use `HexDump(N)` instead.
-- **Binary** — `std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::BinaryData` print as Base64 by default (`StormByte::Base64Encode` returns `CString`). With `hex(N)` the dump is `BinaryData::HexDump(N)`.
-- **Owned text** — `String`, `WString`, `CString`, `WCString`, `Size` and `ByteSize` have explicit `operator<<`. Conversion runs only when the line will be written (`WillWrite()`). Ill-formed wide text is emitted as U+FFFD.
+- **Binary** — `std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::BinaryData` print as Base64 by default (`StormByte::Base64Encode` returns `StormByte::Safe::String`). With `hex(N)` the dump is `BinaryData::HexDump(N)`.
+- **Owned text** — `StormByte::Safe::String`, `StormByte::Safe::WString`, `Size` and `ByteSize` have explicit `operator<<`. Owned strings preserve embedded NUL code units; conversion runs only when the line will be written (`WillWrite()`). Ill-formed wide text is emitted as U+FFFD.
 - **ThreadedLog** — one lock per logical line. Binary encoding (Base64 / hex) and wide-to-UTF-8 run before the lock. Filtered writes do not take the lock.
 - **Not thread-safe** — plain `Log` is single-threaded. Share a logger across threads only via `ThreadedLog`.
 
@@ -190,7 +190,7 @@ For a custom sink that crosses a DLL boundary, use `SinkFunction` (`StormByte::S
 
 Public logger facades and manipulators that carry Base-owned fields are declared `MaybeSafe`; optional fields use `StormByte::Safe::Optional` rather than `std::optional` across the module boundary.
 
-Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::BinaryData`, `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Safe::CString`, `StormByte::Safe::WCString`, `StormByte::Size`, `StormByte::ByteSize`. The inline `std::string` overload passes a view during the call; Logger copies its bytes into the line buffer synchronously. `std::wstring` converts to the wide view. `std::vector<std::byte>` converts to the span. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned Base text type.
+Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::BinaryData`, `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Size`, `StormByte::ByteSize`. The inline `std::string` overload passes a view during the call; Logger copies its bytes into the line buffer synchronously. `std::wstring` converts to the wide view. `std::vector<std::byte>` converts to the span. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned Base text type.
 
 ### A line
 
@@ -222,25 +222,20 @@ The objects store `StormByte::Safe::Shared<Log>` (or a `std::shared_ptr<Log>` co
 
 ### Owned text and Size
 
-Text that is owned by another module, or that must remain valid after returning across a DLL / `.so`, is `StormByte::Safe::String` / `WString` / `CString` / `WCString`. Do not put `std::string` in objects that cross that boundary.
+Text that is owned by another module, or that must remain valid after returning across a DLL / `.so`, is `StormByte::Safe::String` / `WString`. These length-aware types preserve embedded NUL code units; use a C-string constructor only when the source is intentionally NUL-terminated. Do not put `std::string` in objects that cross that boundary.
 
 `Safe::String` has an implicit inline `string_view` in the **caller**. That view points at the other module's buffer. Logger provides an explicit `operator<<(const Safe::String&)` so the copy into the line happens on this side after `WillWrite()`.
 
 ```cpp
-#include <StormByte/safe/cstring.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
-#include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
 
-using StormByte::Safe::CString;
 using StormByte::Size;
-using StormByte::Safe::WCString;
 using StormByte::Safe::String;
 using StormByte::Safe::WString;
 
 log << Level::Info << String{"owned utf-8"} << std::endl;
-log << Level::Info << CString{"owned cstring"} << std::endl;
 log << Level::Info << WString{L"wide"} << std::endl;
 log << Level::Info << Size{1024} << std::endl;
 
@@ -499,7 +494,7 @@ Install rules before concurrent writers start.
 Other suite modules log through this module. A useful convention is:
 
 - Identify the module with `Scope("Multimedia")` (or a nested `Scope("Decoder")`), not by repeating `component(...)` on every line.
-- Pass owned `String` / `CString` when the text is produced in that module and must survive the return.
+- Pass owned `String` when the text is produced in that module and must survive the return.
 - `LowLevel` — per-packet / per-frame / wait-wake. Sparse-sample if the volume would drown the log.
 - `Debug` — binds, reserves, work `n/min/max`.
 - `Notice` — created, open path, eof, closed. Must stay low-noise.
@@ -540,7 +535,7 @@ From 2.0.0, original StormByte-Logger source is dual-licensed:
 1. GNU Lesser General Public License version 3 or later. See [LICENSE](LICENSE) and <https://www.gnu.org/licenses/lgpl-3.0.html>.
 2. A commercial license from the copyright holder (David C. Manuelda, StormBytePP).
 
-Neither license covers other StormByte modules or third-party material shipped under `thirdparty/` (including bundled StormByte-String and the Base tree it vendors). Those keep their own licenses. Neither license grants patent rights.
+Neither license covers other StormByte modules or third-party material shipped under `thirdparty/` (including the bundled Base tree). Those keep their own licenses. Neither license grants patent rights.
 
 Static linking under the LGPL is described under [Installation](#installation).
 

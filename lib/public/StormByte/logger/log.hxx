@@ -44,14 +44,12 @@
 #include <StormByte/byte_size.hxx>
 #include <StormByte/safe/callback.hxx>
 #include <StormByte/safe/clonable.hxx>
-#include <StormByte/safe/cstring.hxx>
 #include <StormByte/safe/map.hxx>
 #include <StormByte/safe/optional.hxx>
+#include <StormByte/safe/string.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
 #include <StormByte/size.hxx>
-#include <StormByte/safe/string.hxx>
-#include <StormByte/safe/wcstring.hxx>
 #include <StormByte/safe/wstring.hxx>
 #include <StormByte/safe/vector.hxx>
 #include <StormByte/type_traits.hxx>
@@ -425,18 +423,6 @@ namespace StormByte::Logger {
 			}
 
 			/**
-			 * @brief Stream owned UTF-8 bytes.
-			 * @param v Buffer owned by Base. Copied into the line buffer.
-			 * @return Reference to this logger.
-			 */
-			inline Log& operator<<(const StormByte::Safe::CString& v) {
-				if (!WillWrite()) [[likely]]
-					return *this;
-				WriteValue(static_cast<std::string_view>(v));
-				return *this;
-			}
-
-			/**
 			 * @brief Stream owned UTF-8 text.
 			 * @param v Text owned by Base. Copied into the line buffer.
 			 * @return Reference to this logger.
@@ -469,18 +455,6 @@ namespace StormByte::Logger {
 				if (!WillWrite()) [[likely]]
 					return *this;
 				Write(v);
-				return *this;
-			}
-
-			/**
-			 * @brief Stream owned wide bytes.
-			 * @param v Buffer owned by Base. Copied into the line buffer.
-			 * @return Reference to this logger.
-			 */
-			inline Log& operator<<(const StormByte::Safe::WCString& v) {
-				if (!WillWrite()) [[likely]]
-					return *this;
-				Write(static_cast<std::wstring_view>(v));
 				return *this;
 			}
 
