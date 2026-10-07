@@ -59,7 +59,6 @@ using namespace StormByte::Logger;
 // -------------------
 
 int test_log_filtered_high_volume() {
-	int result = 0;
 	std::ostringstream output;
 	Log log(output, Level::Error, "%L:");
 	constexpr int N = 100000;
@@ -71,13 +70,12 @@ int test_log_filtered_high_volume() {
 	}
 	const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - t0).count();
-	ASSERT_EQUAL("test_log_filtered_high_volume (output)", std::string(""), output.str());
+	ASSERT_EMPTY(output.str());
 	std::cout << "  [perf] Log filtered " << (N * 3) << " lines in " << ms << " ms\n";
-	RETURN_TEST("test_log_filtered_high_volume", result);
+	RETURN_TEST(0);
 }
 
 int test_log_filtered_owned_text_high_volume() {
-	int result = 0;
 	std::ostringstream output;
 	Log log(output, Level::Error, "%L:");
 	constexpr int N = 50000;
@@ -87,13 +85,12 @@ int test_log_filtered_owned_text_high_volume() {
 		log << Level::Debug << hidden << std::endl;
 	const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - t0).count();
-	ASSERT_EQUAL("test_log_filtered_owned_text_high_volume (output)", std::string(""), output.str());
+	ASSERT_EMPTY(output.str());
 	std::cout << "  [perf] Log filtered owned text " << N << " lines in " << ms << " ms\n";
-	RETURN_TEST("test_log_filtered_owned_text_high_volume", result);
+	RETURN_TEST(0);
 }
 
 int test_threaded_filtered_high_volume() {
-	int result = 0;
 	std::ostringstream output;
 	ThreadedLog tlog(output, Level::Error, "%L:");
 	constexpr int N = 50000;
@@ -103,14 +100,12 @@ int test_threaded_filtered_high_volume() {
 	tlog << Level::Error << "only" << std::endl;
 	const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - t0).count();
-	ASSERT_EQUAL("test_threaded_filtered_high_volume (output)",
-		std::string("Error   : only\n"), output.str());
+	ASSERT_EQUAL(std::string("Error   : only\n"), output.str());
 	std::cout << "  [perf] ThreadedLog filtered " << N << " lines in " << ms << " ms\n";
-	RETURN_TEST("test_threaded_filtered_high_volume", result);
+	RETURN_TEST(0);
 }
 
 int test_threaded_filtered_multithreaded_volume() {
-	int result = 0;
 	std::ostringstream output;
 	ThreadedLog tlog(output, Level::Info, "%L:");
 	constexpr int threads = 8;
@@ -130,15 +125,13 @@ int test_threaded_filtered_multithreaded_volume() {
 		th.join();
 	const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - t0).count();
-	ASSERT_EQUAL("test_threaded_filtered_multithreaded_volume (workers)",
-		std::to_string(threads), std::to_string(finished.load()));
+	ASSERT_EQUAL(threads, finished.load());
 	tlog << Level::Info << "done" << std::endl;
-	ASSERT_EQUAL("test_threaded_filtered_multithreaded_volume (output)",
-		std::string("Info    : done\n"), output.str());
+	ASSERT_EQUAL(std::string("Info    : done\n"), output.str());
 	std::cout << "  [perf] ThreadedLog filtered "
 		<< (threads * per_thread) << " lines (" << threads << " threads) in "
 		<< ms << " ms\n";
-	RETURN_TEST("test_threaded_filtered_multithreaded_volume", result);
+	RETURN_TEST(0);
 }
 
 int main() {

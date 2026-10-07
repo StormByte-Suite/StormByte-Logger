@@ -40,18 +40,18 @@
 
 #pragma once
 
-#include <StormByte/binary_data.hxx>
 #include <StormByte/byte_size.hxx>
+#include <StormByte/logger/manipulators.hxx>
+#include <StormByte/logger/typedefs.hxx>
+#include <StormByte/safe/binary.hxx>
 #include <StormByte/safe/callback.hxx>
 #include <StormByte/safe/clonable.hxx>
 #include <StormByte/safe/map.hxx>
 #include <StormByte/safe/optional.hxx>
 #include <StormByte/safe/string.hxx>
-#include <StormByte/logger/manipulators.hxx>
-#include <StormByte/logger/typedefs.hxx>
-#include <StormByte/size.hxx>
-#include <StormByte/safe/wstring.hxx>
 #include <StormByte/safe/vector.hxx>
+#include <StormByte/safe/wstring.hxx>
+#include <StormByte/size.hxx>
 #include <StormByte/type_traits.hxx>
 #include <StormByte/type_traits/safe.hxx>
 
@@ -108,10 +108,10 @@ namespace StormByte::Logger {
 	 * StormByte::Size and StormByte::ByteSize are sugar over operator std::string.
 	 *
 	 * Binary payloads are std::span<const std::byte>, std::vector<std::byte>
-	 * and StormByte::BinaryData. Default formatting is Base64. With hex(N)
-	 * they use BinaryData::HexDump(N). Text still uses the 0xAA dump.
+	 * and StormByte::Safe::Binary. Default formatting is Base64. With hex(N)
+	 * they use Safe::Binary::HexDump(N). Text still uses the 0xAA dump.
 	 */
-	class STORMBYTE_LOGGER_PUBLIC Log : protected StormByte::Safe::Clonable<Log> {
+	class STORMBYTE_LOGGER_PUBLIC Log: protected StormByte::Safe::Clonable<Log> {
 		friend STORMBYTE_LOGGER_PUBLIC Log& humanreadable_number(Log& log) noexcept;
 		friend STORMBYTE_LOGGER_PUBLIC Log& humanreadable_bytes(Log& log) noexcept;
 		friend STORMBYTE_LOGGER_PUBLIC Log& nohumanreadable(Log& log) noexcept;
@@ -183,7 +183,7 @@ namespace StormByte::Logger {
 			/**
 			 * @brief Another facade on the same backend, with a sticky component path.
 			 * @param path Segment relative to this facade, or a /-separated path.
-				 * @return @ref StormByte::Safe::Shared of a Log (ThreadedLog if *this is one). Never null.
+			 * @return @ref StormByte::Safe::Shared of a Log (ThreadedLog if *this is one). Never null.
 			 * @note Does not register the component and does not preconfigure Format, Color or Throttle.
 			 *       An empty path returns a clone of this facade.
 			 */
@@ -484,10 +484,10 @@ namespace StormByte::Logger {
 
 			/**
 			 * @brief Stream owned bytes.
-			 * @param v BinaryData. Same contract as a byte span: Base64, or HexDump when hex is active.
+			 * @param v Safe::Binary. Same contract as a byte span: Base64, or HexDump when hex is active.
 			 * @return Reference to this logger.
 			 */
-			inline Log& operator<<(const StormByte::BinaryData& v) {
+			inline Log& operator<<(const StormByte::Safe::Binary& v) {
 				if (!WillWrite()) [[likely]]
 					return *this;
 				Write(static_cast<std::span<const std::byte>>(v));
@@ -732,8 +732,8 @@ namespace StormByte::Logger {
 			 */
 			Log(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format);
 
-			StormByte::Safe::Shared<Engine> m_engine;			///< Shared backend on Base's heap
-			StormByte::Safe::String m_scope_path;			///< Sticky component path; empty = root facade
+			StormByte::Safe::Shared<Engine> m_engine;	///< Shared backend on Base's heap
+			StormByte::Safe::String m_scope_path;		///< Sticky component path; empty = root facade
 
 			/**
 			 * @brief Whether the current line level will be written.
@@ -780,13 +780,13 @@ namespace StormByte::Logger {
 			void WriteValue(const T& v);
 
 			/**
-				 * @brief Deep-copy this facade into a @ref StormByte::Safe::Shared.
+			 * @brief Deep-copy this facade into a @ref StormByte::Safe::Shared.
 			 * @return Pointer to the clone.
 			 */
 			PointerType Clone() const override;
 
 			/**
-				 * @brief Move this facade into a @ref StormByte::Safe::Shared.
+			 * @brief Move this facade into a @ref StormByte::Safe::Shared.
 			 * @return Pointer to the new facade.
 			 */
 			PointerType Move() override;
@@ -917,8 +917,8 @@ namespace StormByte::Logger {
 	/**
 	 * @brief Pointer-like owner of `Log` or a derived logger.
 	 *
-		 * Matches `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Safe::Shared and
-		 * @ref StormByte::Safe::Unique, including a const owner captured by a lambda.
+	 * Matches `std::shared_ptr`, `std::unique_ptr`, @ref StormByte::Safe::Shared and
+	 * @ref StormByte::Safe::Unique, including a const owner captured by a lambda.
 	 * `Ptr` is deduced from `Ptr&`, so a const argument deduces a const pointer type.
 	 *
 	 * @tparam Ptr Pointer type.

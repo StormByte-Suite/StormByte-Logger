@@ -111,15 +111,15 @@ void Log::WriteValue(const T& v) {
 }
 
 Log::Log(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format) {
-	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(write, manip, context, level, std::string{format});
+	m_engine = StormByte::Safe::MakeShared<Engine>(write, manip, context, level, std::string{format});
 }
 
 Log::Log(StormByte::Safe::Callback&& callback, const Level& level, std::string_view format) {
-	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(std::move(callback), level, std::string{format});
+	m_engine = StormByte::Safe::MakeShared<Engine>(std::move(callback), level, std::string{format});
 }
 
 Log::Log(SinkFunction&& callback, const Level& level, std::string_view format) {
-	m_engine = StormByte::Safe::Heap::MakeShared<Engine>(std::move(callback), level, std::string{format});
+	m_engine = StormByte::Safe::MakeShared<Engine>(std::move(callback), level, std::string{format});
 }
 
 Log::PointerType Log::Clone() const {

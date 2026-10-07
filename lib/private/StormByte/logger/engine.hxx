@@ -41,15 +41,15 @@
 #pragma once
 
 #include <StormByte/base64.hxx>
-#include <StormByte/binary_data.hxx>
 #include <StormByte/logger/human_readable.hxx>
 #include <StormByte/logger/manipulators.hxx>
 #include <StormByte/logger/typedefs.hxx>
+#include <StormByte/safe/binary.hxx>
 #include <StormByte/safe/callback.hxx>
 #include <StormByte/safe/function.hxx>
-#include <StormByte/size.hxx>
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wstring.hxx>
+#include <StormByte/size.hxx>
 #include <StormByte/type_traits.hxx>
 
 #include <charconv>
@@ -222,10 +222,10 @@ namespace StormByte::Logger {
 			 * @return Display string. HexDump uses @c m_hex_columns. Base64 is one line.
 			 */
 			std::string FormatBinary(std::span<const std::byte> v) const {
-				const StormByte::BinaryData data(v);
+				const StormByte::Safe::Binary data(v);
 				if (m_hex_active)
 					return static_cast<std::string>(data.HexDump(StormByte::Size{m_hex_columns}));
-				return static_cast<std::string>(StormByte::Base64Encode(data));
+				return static_cast<std::string>(StormByte::Base64Encode(static_cast<std::span<const std::byte>>(data)));
 			}
 
 			/**
@@ -577,32 +577,32 @@ namespace StormByte::Logger {
 				}
 			}
 
-			SinkWrite m_write = nullptr;									///< Caller write callback
-			SinkManip m_manip = nullptr;									///< Caller manipulator callback
-			void* m_context = nullptr;									///< Opaque sink, not owned
+			SinkWrite m_write = nullptr;												///< Caller write callback
+			SinkManip m_manip = nullptr;												///< Caller manipulator callback
+			void* m_context = nullptr;													///< Opaque sink, not owned
 			std::optional<StormByte::Safe::Callback> m_callback;						///< Owned Base callback sink, when configured
-				std::optional<SinkFunction> m_function;							///< Typed callback released in its creator module
-			Level m_print_level;										///< Minimum level that will be printed
-			std::optional<Level> m_current_level;								///< Level of the current message
-			std::atomic<bool> m_enabled;									///< Whether the current level is enabled
-			std::string m_format;										///< Header format string
-			std::vector<std::string> m_format_stack;							///< Temporary formats for push/pop
-			std::unordered_map<std::string, std::string> m_component_formats;				///< Persistent component formats
-			Detail::HumanReadable m_human_readable_format;							///< Current human-readable format
-			bool m_redact_active;										///< When true, text and numbers are redacted
-			std::size_t m_redact_count;									///< 0 = all '*'; N = keep N chars
-			bool m_redact_keep_first;									///< true = keep first N, false = keep last N
-			bool m_hex_active;										///< When true, payloads are dumped as hex
-			std::size_t m_hex_columns;									///< Bytes per hex row; 0 disables wrapping
+			std::optional<SinkFunction> m_function;										///< Typed callback released in its creator module
+			Level m_print_level;														///< Minimum level that will be printed
+			std::optional<Level> m_current_level;										///< Level of the current message
+			std::atomic<bool> m_enabled;												///< Whether the current level is enabled
+			std::string m_format;														///< Header format string
+			std::vector<std::string> m_format_stack;									///< Temporary formats for push/pop
+			std::unordered_map<std::string, std::string> m_component_formats;			///< Persistent component formats
+			Detail::HumanReadable m_human_readable_format;								///< Current human-readable format
+			bool m_redact_active;														///< When true, text and numbers are redacted
+			std::size_t m_redact_count;													///< 0 = all '*'; N = keep N chars
+			bool m_redact_keep_first;													///< true = keep first N, false = keep last N
+			bool m_hex_active;															///< When true, payloads are dumped as hex
+			std::size_t m_hex_columns;													///< Bytes per hex row; 0 disables wrapping
 			std::array<StormByte::Logger::Color, 7> m_level_colors{};					///< Configured color per level
 			std::unordered_map<std::string, std::array<StormByte::Logger::Color, 7>> m_component_colors;	///< Component color overrides
-			std::optional<StormByte::Logger::Color> m_content_color;						///< Temporary content color override
-			bool m_content_nocolor = false;									///< Whether content color is suppressed
+			std::optional<StormByte::Logger::Color> m_content_color;					///< Temporary content color override
+			bool m_content_nocolor = false;												///< Whether content color is suppressed
 			std::optional<StormByte::Logger::Color> m_active_color;						///< Color currently emitted to the stream
 #ifdef WINDOWS
-			std::atomic<std::shared_ptr<const ThrottleTable>> m_throttle_table;				///< Immutable rules snapshot
+			std::atomic<std::shared_ptr<const ThrottleTable>> m_throttle_table;			///< Immutable rules snapshot
 #elifdef __GLIBCXX__
-			std::atomic<std::shared_ptr<const ThrottleTable>> m_throttle_table;				///< Immutable rules snapshot
+			std::atomic<std::shared_ptr<const ThrottleTable>> m_throttle_table;			///< Immutable rules snapshot
 #else
 			std::shared_ptr<const ThrottleTable> m_throttle_table;						///< Immutable rules snapshot, atomically accessed
 #endif

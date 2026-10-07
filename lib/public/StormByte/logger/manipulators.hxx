@@ -97,16 +97,29 @@ namespace StormByte::Logger {
 	 * @brief Set the producer group for the current line.
 	 * @param name Group name, or empty text to clear the group.
 	 * @return Group manipulator carrying the requested name.
+	 * A literal binds here. The owned string is built in the caller.
 	 */
-	STORMBYTE_LOGGER_PUBLIC GroupManip group(StormByte::Safe::String name);
+	inline GroupManip group(const char* name) {
+		return GroupManip{StormByte::Safe::String{name != nullptr ? name : ""}};
+	}
 
 	/**
-	 * @brief Set the producer group from caller-owned text.
+	 * @brief Set the producer group from a view.
 	 * @param name Group name viewed in the caller; copied into an owned String.
 	 * @return Group manipulator carrying the requested name.
+	 * `std::string` binds here. It does not compete with a literal.
 	 */
 	inline GroupManip group(std::string_view name) {
-		return group(StormByte::Safe::String{name});
+		return GroupManip{StormByte::Safe::String{name}};
+	}
+
+	/**
+	 * @brief Set the producer group from an owned string.
+	 * @param name Group name already owned by Base.
+	 * @return Group manipulator carrying the requested name.
+	 */
+	inline GroupManip group(const StormByte::Safe::String& name) {
+		return GroupManip{name};
 	}
 
 	/**
@@ -127,16 +140,29 @@ namespace StormByte::Logger {
 	 * @return Component manipulator carrying the requested name.
 	 * @note An empty component is allowed for compatibility, but @ref reset_component
 	 *       is preferred when returning to the root component explicitly.
+	 * A literal binds here. The owned string is built in the caller.
 	 */
-	STORMBYTE_LOGGER_PUBLIC ComponentManip component(StormByte::Safe::String name);
+	inline ComponentManip component(const char* name) {
+		return ComponentManip{StormByte::Safe::String{name != nullptr ? name : ""}};
+	}
 
 	/**
-	 * @brief Select the component from caller-owned text.
+	 * @brief Select the component from a view.
 	 * @param name Component name viewed in the caller; copied into an owned String.
 	 * @return Component manipulator carrying the requested name.
+	 * `std::string` binds here. It does not compete with a literal.
 	 */
 	inline ComponentManip component(std::string_view name) {
-		return component(StormByte::Safe::String{name});
+		return ComponentManip{StormByte::Safe::String{name}};
+	}
+
+	/**
+	 * @brief Select the component from an owned string.
+	 * @param name Component name already owned by Base.
+	 * @return Component manipulator carrying the requested name.
+	 */
+	inline ComponentManip component(const StormByte::Safe::String& name) {
+		return ComponentManip{name};
 	}
 
 	/**
@@ -185,16 +211,29 @@ namespace StormByte::Logger {
 	 * @brief Save the current format and activate a temporary format.
 	 * @param format Format to activate until pop_format is streamed.
 	 * @return Format manipulator containing the requested format.
+	 * A literal binds here. The owned string is built in the caller.
 	 */
-	STORMBYTE_LOGGER_PUBLIC FormatManip push_format(StormByte::Safe::String format);
+	inline FormatManip push_format(const char* format) {
+		return FormatManip{StormByte::Safe::String{format != nullptr ? format : ""}};
+	}
 
 	/**
-	 * @brief Save the current format and activate a temporary format from caller-owned text.
+	 * @brief Save the current format and activate a temporary format from a view.
 	 * @param format Format viewed in the caller; copied into an owned String.
 	 * @return Format manipulator containing the requested format.
+	 * `std::string` binds here. It does not compete with a literal.
 	 */
 	inline FormatManip push_format(std::string_view format) {
-		return push_format(StormByte::Safe::String{format});
+		return FormatManip{StormByte::Safe::String{format}};
+	}
+
+	/**
+	 * @brief Save the current format and activate a temporary format from an owned string.
+	 * @param format Format already owned by Base.
+	 * @return Format manipulator containing the requested format.
+	 */
+	inline FormatManip push_format(const StormByte::Safe::String& format) {
+		return FormatManip{format};
 	}
 
 	/**
@@ -288,8 +327,8 @@ namespace StormByte::Logger {
 	 *
 	 * The payload is converted as usual (numbers / bool to text, wide text to
 	 * UTF-8) and then each byte is printed as @c 0xAA separated by spaces.
-	 * Byte spans and @ref StormByte::BinaryData do not use that text dump:
-	 * with this manipulator active they use @ref StormByte::BinaryData::HexDump
+	 * Byte spans and @ref StormByte::Safe::Binary do not use that text dump:
+	 * with this manipulator active they use @ref StormByte::Safe::Binary::HexDump
 	 * and @c columns is the row width. Without it they stay Base64.
 	 * @c columns is the number of bytes per continuation row; @c 0 disables
 	 * wrapping. Continuations write a raw newline without a new header and
@@ -300,7 +339,7 @@ namespace StormByte::Logger {
 	 * Usage:
 	 * @code
 	 * log << hex << "AB" << std::endl;       // 0x41 0x42  (16-byte rows)
-	 * log << hex(2) << "ABCD" << std::endl;  // 0x41 0x42\\n0x43 0x44
+	 * log << hex(2) << "ABCD" << std::endl;  // 0x41 0x42\n0x43 0x44
 	 * log << nohex << "plain" << std::endl;
 	 * @endcode
 	 */

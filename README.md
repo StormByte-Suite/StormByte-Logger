@@ -9,7 +9,7 @@
 
 This repository is **StormByte Logger**: stream logging for the StormByte C++ suite.
 
-It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Size`).
+It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Size`, `StormByte::ByteSize`, `StormByte::Safe::Binary`).
 
 The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedia, Network and System are **other repositories**. This one does not implement them.
 
@@ -25,9 +25,10 @@ The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedi
 - **Formats** — persistent general / component-path formats (longest prefix wins) plus nested temporary `push_format("...")` / `pop_format`.
 - **Human-readable** — `humanreadable_number`, `humanreadable_bytes`, `nohumanreadable`. Formatting lives in Logger (`Detail`).
 - **Redaction** — `redact` / `redact(N)` keep last N, `redact_first(N)` keep first N, `noredact`.
-- **Hex** — `hex` / `hex(N)` dumps text payloads as `0xAA` with N bytes per row (default 16). `nohex` restores the default. Applies to every subsequent text payload, including numbers (text bytes, not numeric hex). Binary payloads use `HexDump(N)` instead.
-- **Binary** — `std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::BinaryData` print as Base64 by default (`StormByte::Base64Encode` returns `StormByte::Safe::String`). With `hex(N)` the dump is `BinaryData::HexDump(N)`.
+- **Hex** — `hex` / `hex(N)` dumps text payloads as `0xAA` with N bytes per row (default 16). `nohex` restores the default. Applies to every subsequent text payload, including numbers (text bytes, not numeric hex). Binary payloads use `Safe::Binary::HexDump(N)` instead.
+- **Binary** — `std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::Safe::Binary` print as Base64 by default (`StormByte::Base64Encode` returns `StormByte::Safe::String`). With `hex(N)` the dump is `Safe::Binary::HexDump(N)`.
 - **Owned text** — `StormByte::Safe::String`, `StormByte::Safe::WString`, `Size` and `ByteSize` have explicit `operator<<`. Owned strings preserve embedded NUL code units; conversion runs only when the line will be written (`WillWrite()`). Ill-formed wide text is emitted as U+FFFD.
+- **Owners** — `std::shared_ptr`, `std::unique_ptr`, `StormByte::Safe::Shared` and `StormByte::Safe::Unique` of `Log` or `ThreadedLog` unwrap in `operator<<`. No dereference at the call site. An empty owner is a no-op.
 - **ThreadedLog** — one lock per logical line. Binary encoding (Base64 / hex) and wide-to-UTF-8 run before the lock. Filtered writes do not take the lock.
 - **Not thread-safe** — plain `Log` is single-threaded. Share a logger across threads only via `ThreadedLog`.
 
@@ -71,6 +72,7 @@ The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedi
 - [ThreadedLog contract](#threadedlog-contract)
 - [Contributing](#contributing)
 - [License](#license)
+- [Support](#support)
 
 ## Documentation
 
@@ -148,7 +150,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-Shared vs static follows CMake `BUILD_SHARED_LIBS` (declared in `lib/`, default ON). A plain configure builds the shared library. `-DBUILD_SHARED_LIBS=OFF` builds a static archive; on Windows the headers then do not use `dllimport`. Vendored StormByte Base follows the same mode.
+Shared vs static follows CMake `BUILD_SHARED_LIBS` (default ON). A plain configure builds the shared library. `-DBUILD_SHARED_LIBS=OFF` builds a static archive; on Windows the headers then do not use `dllimport`. Vendored StormByte Base follows the same mode.
 
 A shared build keeps this library as its own `.so` / `.dll`. Under the LGPL that is usually the simpler way to ship: the user can replace that file. A static archive is folded into your binary. The LGPL still applies to this code; you must give the recipient a way to relink your product with a different build of this library. If that does not fit how you distribute the final product, a commercial license is available from the copyright holder (see [License](#license)).
 
@@ -164,6 +166,7 @@ Headers are `#include <StormByte/logger/….hxx>`. Namespace root is `StormByte:
 #include <StormByte/logger/log.hxx>
 #include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/logger/manipulators.hxx>
+#include <StormByte/safe/pointers.hxx>
 #include <iostream>
 #include <memory>
 
@@ -172,17 +175,22 @@ using namespace StormByte::Logger;
 Log log(std::cout, Level::Info, "[%L] %T");
 log << Level::Info << "hello" << std::endl;
 
-auto tlog = std::make_shared<ThreadedLog>(std::cout, Level::Debug, "[%L] %T");
-tlog << Level::Notice << "opened source /tmp/in.mkv" << std::endl;
-tlog << Level::Debug  << "mapped Video 0 -> order 0" << std::endl;
+auto shared = std::make_shared<ThreadedLog>(std::cout, Level::Debug, "[%L] %T");
+shared << Level::Notice << "opened source /tmp/in.mkv" << std::endl;
+
+auto unique = std::make_unique<ThreadedLog>(std::cout, Level::Debug, "[%L] %T");
+unique << Level::Debug << "mapped Video 0 -> order 0" << std::endl;
+
+StormByte::Safe::Shared<ThreadedLog> safe_shared =
+	StormByte::Safe::Shared<ThreadedLog>::MakePointer<ThreadedLog>(std::cout);
+safe_shared << Level::Info << "Hola" << std::endl;
+
+StormByte::Safe::Unique<ThreadedLog> safe_unique =
+	StormByte::Safe::Unique<ThreadedLog>::MakePointer<ThreadedLog>(std::cout);
+safe_unique << Level::Info << "Hola" << std::endl;
 ```
 
-`operator<<` unpacks `std::shared_ptr` / `std::unique_ptr` and `StormByte::Safe::Shared` / `StormByte::Safe::Unique` whose element type derives from `Log` (`Log` and `ThreadedLog`). `*tlog <<` still works, and so does `tlog <<` on those owners:
-
-```cpp
-StormByte::Safe::Shared<ThreadedLog> log = StormByte::Safe::Shared<ThreadedLog>::MakePointer<ThreadedLog>(std::cout);
-log << Level::Info << "Hola" << std::endl;
-```
+`operator<<` unpacks those four owners when the element type derives from `Log` (`Log` and `ThreadedLog`). The call site does not dereference. `*shared <<` still works. An empty owner does nothing and the expression still yields the pointer.
 
 `Log` and `ThreadedLog` accept any `std::ostream` (`std::cout`, a file stream, a string stream). The stream must outlive the logger. The DLL never calls into that stream: each write and each manipulator (`std::endl`, `std::flush`, …) jumps back to `OStreamWrite` / `OStreamManip`, which are compiled into the module that constructed the logger.
 
@@ -190,7 +198,7 @@ For a custom sink that crosses a DLL boundary, use `SinkFunction` (`StormByte::S
 
 Public logger facades and manipulators that carry Base-owned fields are declared `MaybeSafe`; optional fields use `StormByte::Safe::Optional` rather than `std::optional` across the module boundary.
 
-Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::BinaryData`, `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Size`, `StormByte::ByteSize`. The inline `std::string` overload passes a view during the call; Logger copies its bytes into the line buffer synchronously. `std::wstring` converts to the wide view. `std::vector<std::byte>` converts to the span. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned Base text type.
+Streamed payload types: `bool`, the standard integer and floating types, `char` / `unsigned char` / `wchar_t`, `const char*`, `const wchar_t*`, `std::string`, `std::string_view`, `std::wstring_view`, `std::span<const std::byte>`, `StormByte::Safe::Binary`, `StormByte::Safe::String`, `StormByte::Safe::WString`, `StormByte::Size`, `StormByte::ByteSize`. The inline `std::string` overload passes a view during the call; Logger copies its bytes into the line buffer synchronously. `std::wstring` converts to the wide view. `std::vector<std::byte>` converts to the span. There is no `std::format` overload on the logger itself; format first, then stream the view or an owned Base text type.
 
 ### A line
 
@@ -208,9 +216,9 @@ Do not start a line without a `Level` if you care about the filter. Do not omit 
 
 ### Sharing a logger
 
-Copy and copy-assignment of `Log` / `ThreadedLog` share the same `Engine` (`shared_ptr`). That is the intended way to hand one logger to several objects on **one** thread.
+Copy and copy-assignment of `Log` / `ThreadedLog` share the same `Engine` (`Safe::Shared`). That is the intended way to hand one logger to several objects on **one** thread.
 
-Across threads, construct a `ThreadedLog` (or `std::make_shared<ThreadedLog>`) and pass that pointer. `Log` has no line lock; concurrent `operator<<` will interleave characters.
+Across threads, construct a `ThreadedLog` and pass a `std::shared_ptr`, `std::unique_ptr`, `Safe::Shared` or `Safe::Unique`. `Log` has no line lock; concurrent `operator<<` will interleave characters.
 
 ```cpp
 auto log = std::make_shared<ThreadedLog>(std::cout, Level::Notice, "[%L] %T");
@@ -228,9 +236,11 @@ Text that is owned by another module, or that must remain valid after returning 
 
 ```cpp
 #include <StormByte/size.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/safe/string.hxx>
 #include <StormByte/safe/wstring.hxx>
 
+using StormByte::ByteSize;
 using StormByte::Size;
 using StormByte::Safe::String;
 using StormByte::Safe::WString;
@@ -238,14 +248,15 @@ using StormByte::Safe::WString;
 log << Level::Info << String{"owned utf-8"} << std::endl;
 log << Level::Info << WString{L"wide"} << std::endl;
 log << Level::Info << Size{1024} << std::endl;
+log << Level::Info << ByteSize{1024} << std::endl;
 
 if (!log.Enabled(Level::Debug)) {
-  // Safe::String / WString are not converted here: the overload returns before ToStd.
+	// Safe::String / WString are not converted here: the overload returns before the copy.
 	log << Level::Debug << WString{L"dropped"} << std::endl;
 }
 ```
 
-`component("Media")`, `group("work")` and `push_format("[%L]")` take `std::string_view` in the caller (literals work). The manipulator stores an owned `String`.
+`component("Media")`, `group("work")` and `push_format("[%L]")` are header factories. A literal binds to `const char*`, a `std::string` or `std::string_view` binds to the view, and a `Safe::String` binds by identity. The manipulator stores an owned `String`, built in the caller. They are not exported DLL overloads.
 
 Ill-formed wide input is written as U+FFFD (`EF BF BD`). Logger does not throw `UTF8Error` on that path. A filtered wide write does not convert at all.
 
@@ -256,7 +267,7 @@ and `StormByte::Safe::Map`, including nested combinations when their values
 have a Logger streaming overload. A present optional writes its value; an
 empty one writes `(empty Safe::Optional)`. Vectors use `[value1, value2]`;
 maps use one tab-indented `key: value` entry per line, in the map's key order.
-Empty containers write `[]` and `{}`. `StormByte::BinaryData` has the same
+Empty containers write `[]` and `{}`. `StormByte::Safe::Binary` has the same
 Base64 and hex output as an equivalent `std::vector<std::byte>`.
 
 ### Human-readable numbers
@@ -312,11 +323,15 @@ log << Level::Info << nohex << "plain" << std::endl;
 
 Numbers are converted to text first, then those text bytes are dumped. It is not a numeric hex printer.
 
-`std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::BinaryData` are Base64 by default. With `hex(N)` they use `BinaryData::HexDump(N)` (offset, hex columns, ASCII), not the `0xHH` text dump:
+`std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::Safe::Binary` are Base64 by default. With `hex(N)` they use `Safe::Binary::HexDump(N)` (offset, hex columns, ASCII), not the `0xHH` text dump:
 
 ```cpp
+#include <StormByte/safe/binary.hxx>
+
 const std::vector<std::byte> raw{std::byte{'H'}, std::byte{'i'}};
+const StormByte::Safe::Binary owned{raw};
 log << Level::Info << raw << std::endl;            // Base64
+log << Level::Info << owned << std::endl;          // same Base64
 log << Level::Info << hex(8) << raw << std::endl;  // HexDump, 8 columns
 ```
 
@@ -420,7 +435,7 @@ Rules:
 - A Scope line uses the sticky path, not the TLS stack. Pushing `component`
   on the original logger does not change a Scope facade, and a Scope write
   does not push onto the TLS stack.
-- Copies share the backend (`std::out`, file, throttle table, formats, colors).
+- Copies share the backend (stream callbacks, throttle table, formats, colors).
 - `ThreadedLog` facades share the same line lock.
 - `Format`, `Color` and `Throttle` **without** a component argument bind to
   the facade path. On the root logger (empty path) they remain global.

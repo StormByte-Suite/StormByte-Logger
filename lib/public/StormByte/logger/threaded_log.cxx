@@ -134,13 +134,13 @@ namespace {
 }
 
 ThreadedLog::ThreadedLog(SinkWrite write, SinkManip manip, void* context, const Level& level, std::string_view format):
-	Log(write, manip, context, level, format), m_lock(StormByte::Safe::Heap::MakeShared<ThreadLock>()) {}
+	Log(write, manip, context, level, format), m_lock(StormByte::Safe::MakeShared<StormByte::ThreadLock>()) {}
 
 ThreadedLog::ThreadedLog(StormByte::Safe::Callback&& callback, const Level& level, std::string_view format):
-	Log(std::move(callback), level, format), m_lock(StormByte::Safe::Heap::MakeShared<ThreadLock>()) {}
+	Log(std::move(callback), level, format), m_lock(StormByte::Safe::MakeShared<StormByte::ThreadLock>()) {}
 
 ThreadedLog::ThreadedLog(SinkFunction&& callback, const Level& level, std::string_view format):
-	Log(std::move(callback), level, format), m_lock(StormByte::Safe::Heap::MakeShared<ThreadLock>()) {}
+	Log(std::move(callback), level, format), m_lock(StormByte::Safe::MakeShared<StormByte::ThreadLock>()) {}
 
 Log::PointerType ThreadedLog::Clone() const {
 	return PointerType::MakePointer<ThreadedLog>(*this);
