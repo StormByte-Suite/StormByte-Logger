@@ -20,7 +20,7 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte-Logger/blob/master/README.md)
 - License: dual license LGPL-3.0-or-later or commercial, [LICENSE](https://github.com/StormBytePP/StormByte-Logger/blob/master/LICENSE)
 
-## [2.0.0] - 2026-10-07
+## [2.0.0] - 2026-10-10
 
 ### Added
 
