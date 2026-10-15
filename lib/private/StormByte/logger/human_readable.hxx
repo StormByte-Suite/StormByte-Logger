@@ -73,7 +73,7 @@ namespace StormByte {
 			 * @brief Format an arithmetic value as a grouped number.
 			 * @tparam T Arithmetic type other than wchar_t.
 			 * @param number Value.
-			 * @param locale Locale name; falls back to "C".
+			 * @param locale Locale name. A locale with no grouping uses en_US grouping.
 			 * @return Formatted text.
 			 */
 			template<typename T>
@@ -84,7 +84,7 @@ namespace StormByte {
 			 * @brief Format an arithmetic value as an IEC byte size.
 			 * @tparam T Arithmetic type.
 			 * @param bytes Value treated as a byte count.
-			 * @param locale Locale name; falls back to "C".
+			 * @param locale Locale name. A locale with no grouping uses en_US grouping.
 			 * @return Formatted text.
 			 */
 			template<typename T>

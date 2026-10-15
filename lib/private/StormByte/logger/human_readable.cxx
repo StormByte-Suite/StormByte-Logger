@@ -43,8 +43,36 @@
 #include <cmath>
 #include <cstdint>
 #include <iomanip>
+#include <locale>
 #include <sstream>
 #include <string>
+
+namespace {
+	class GroupedNumberPunct final : public std::numpunct<char> {
+		protected:
+			char do_decimal_point() const override { return '.'; }
+			char do_thousands_sep() const override { return ','; }
+			std::string do_grouping() const override { return "\3"; }
+	};
+
+	bool WantsClassicLocale(const std::string& locale) noexcept {
+		return locale.empty() || locale == "C" || locale == "POSIX";
+	}
+
+	void ImbueNumberLocale(std::ostringstream& oss, const std::string& locale) {
+		std::locale applied = std::locale::classic();
+		if (!WantsClassicLocale(locale)) {
+			try {
+				applied = std::locale(locale);
+			} catch (...) {
+				applied = std::locale::classic();
+			}
+			if (std::use_facet<std::numpunct<char>>(applied).grouping().empty())
+				applied = std::locale(applied, new GroupedNumberPunct);
+		}
+		oss.imbue(applied);
+	}
+}
 
 using namespace StormByte::Logger::Detail;
 
@@ -54,11 +82,7 @@ namespace StormByte::Logger::Detail {
 	std::string FormatNumber(const T& number, const std::string& locale) noexcept {
 		try {
 			std::ostringstream oss;
-			try {
-				oss.imbue(std::locale(locale));
-			} catch (...) {
-				oss.imbue(std::locale("C"));
-			}
+			ImbueNumberLocale(oss, locale);
 
 			if constexpr (StormByte::Type::Integral<T>) {
 				oss << number;
@@ -111,11 +135,7 @@ namespace StormByte::Logger::Detail {
 			}
 
 			std::ostringstream oss;
-			try {
-				oss.imbue(std::locale(locale));
-			} catch (...) {
-				oss.imbue(std::locale("C"));
-			}
+			ImbueNumberLocale(oss, locale);
 
 			if (std::fabs(value - std::round(value)) < 0.01)
 				oss << static_cast<int64_t>(std::round(value));

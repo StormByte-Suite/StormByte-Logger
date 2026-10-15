@@ -20,6 +20,14 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte-Logger/blob/master/README.md)
 - License: dual license LGPL-3.0-or-later or commercial, [LICENSE](https://github.com/StormBytePP/StormByte-Logger/blob/master/LICENSE)
 
+## [Unreleased]
+
+### Fixed
+
+- Human-readable numbers keep en_US grouping (`1,000`) when the named C++ locale has no thousands separator. musl does not group `en_US.UTF-8`, so `humanreadable_number` printed `1000` and redaction counted the shorter text.
+
+[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.1...HEAD
+
 ## [2.0.1] - 2026-10-13
 
 ### Changed
