@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 StormByte Logger is the stream-logging module of the StormByte C++ suite.
 
-It depends directly on [StormByte Base 2.0.0](https://github.com/StormByte-Suite/StormByte/releases/tag/2.0.0) or newer. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
+It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.1.0) 2.1.0 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.0. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
 
 Public headers under `StormByte/logger/` cover `Log`, `ThreadedLog`, header formats (`%L` `%T` `%i` `%c` `%g`), hierarchical components and `Scope` facades, groups, ANSI colors, temporary formats, human-readable numbers and bytes, redaction of text and numbers, hex dumps (`hex` / `nohex`), and binary payloads (`std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::Safe::Binary`, default Base64). Owned text that crosses the logger DLL boundary uses `StormByte::Safe::String` / `WString`; `StormByte::Size` and `StormByte::ByteSize` are accepted as payloads. Views and caller-owned `std::string` are consumed synchronously. `group`, `component` and `push_format` are caller-side factories: a literal binds to `const char*`, `std::string` and `std::string_view` bind to the view, and `StormByte::Safe::String` binds by identity. The owned text is built in the caller.
 
@@ -22,11 +22,25 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.2...HEAD
+
+## [2.0.2] - 2026-10-16
+
+### Added
+
+- `ENABLE_PGO` and `ENABLE_LTO`. Profile-guided optimization trains in `pgo-instr` and installs this build. Link-time optimization follows `ENABLE_LTO` (default ON) for every build type. Both apply to Logger. Base is not rebuilt.
+
+### Changed
+
+- Requires [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.0. An older install is not used; the `buildmaster` submodule supplies 2.1.0.
+- Requires [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.1.0) 2.1.0. The build downloads that release archive (`stormbyte_component_url`) and links it with `BACKEND=binary`. The Base submodule is gone. The archive matches this OS and C++ runtime: `libstdc++` or `libc++` on Linux and macOS, no runtime suffix on Windows.
+- Bumped the project version to 2.0.2.
+
 ### Fixed
 
 - Human-readable numbers keep en_US grouping (`1,000`) when the named C++ locale has no thousands separator. musl does not group `en_US.UTF-8`, so `humanreadable_number` printed `1000` and redaction counted the shorter text.
 
-[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.1...HEAD
+[2.0.2]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.1...2.0.2
 
 ## [2.0.1] - 2026-10-13
 
