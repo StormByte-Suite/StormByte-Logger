@@ -33,7 +33,7 @@ If you landed here from a release link and have not read the tree:
 ### Changed
 
 - Requires [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.0. An older install is not used; the `buildmaster` submodule supplies 2.1.0.
-- Requires [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.1.0) 2.1.0. The build downloads that release archive (`stormbyte_component_url`) and links it with `BACKEND=binary`. The Base submodule is gone. The archive matches this OS and C++ runtime: `libstdc++` or `libc++` on Linux and macOS, no runtime suffix on Windows.
+- Requires [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.1.0) 2.1.0. The build downloads that release archive (`stormbyte_component_url`) and links it with `BACKEND=binary`. The Base submodule is gone. The archive matches this OS and C++ runtime: `libstdc++` or `libc++` on Linux and macOS, no runtime suffix on Windows. Doxygen include path is `${BUILDMASTER_INSTALL_INCLUDEDIR}`, not `thirdparty/StormByte/base/src`.
 - Bumped the project version to 2.0.2.
 - **Breaking:** `Logger::Exception` no longer formats with `std::format`. A message with arguments replaces literal `{}` through `Safe::String::ReplaceToken`, the same rule as Base 2.1.0. `what()` stays `StormByte.Logger: message`. An extra `Exception::Path` is the segment under `Logger`, not the full path. `ThrottleError` is still a leaf and adds no segment.
 
