@@ -44,8 +44,7 @@
 #include <StormByte/logger/visibility.h>
 #include <StormByte/type_traits/safe.hxx>
 
-#include <format>
-#include <string>
+#include <string_view>
 #include <utility>
 
 /**
@@ -55,42 +54,92 @@
 namespace StormByte::Logger {
 	/**
 	 * @class Exception
-	 * @brief Root exception for Logger. @c what() is @c StormByte.Logger: message.
+	 * @brief Root exception for Logger. `what()` is `StormByte.Logger: message`.
 	 *
-	 * Forwards the format and the arguments. Does not format. A child segment
-	 * is prepended under `Logger`.
+	 * This type applies the `Logger` segment. A further segment is an @ref Path. The body does not include the path. Literal `{}` are replaced by @ref StormByte::Safe::String::ReplaceToken. This does not call `std::format`. The destructor is defined in this module.
 	 */
 	class STORMBYTE_LOGGER_PUBLIC Exception: public StormByte::Exception {
 		public:
 			/**
-			 * @brief Format under `StormByte.Logger`.
-			 * @tparam Args Format argument types.
-			 * @param fmt Format string.
-			 * @param args Format arguments.
+			 * @struct Path
+			 * @brief Additional path segments nested below `StormByte.Logger`.
+			 */
+			struct Path {
+				std::string_view segments; ///< Additional dotted path segments.
+
+				/**
+				 * @brief Wraps additional path segments.
+				 * @param segments Dotted segments appended below `Logger`.
+				 */
+				explicit constexpr Path(std::string_view segments) noexcept: segments(segments) {}
+			};
+
+			/**
+			 * @brief Replace literal `{}` under `StormByte.Logger`.
+			 * @tparam Args Views, numbers, or types that convert to `std::string`. A number uses `std::to_string`.
+			 * @param pattern Body with literal `{}` tokens. Not a `std::format` string.
+			 * @param args Replacements. One per token, in order.
 			 */
 			template <typename... Args>
-			explicit Exception(std::format_string<Args...> fmt, Args&&... args)
-				: StormByte::Exception(StormByte::Exception::Path{"Logger"}, fmt, std::forward<Args>(args)...) {}
+				requires (sizeof...(Args) >= 1)
+			Exception(std::string_view pattern, Args&&... args)
+				: StormByte::Exception(StormByte::Exception::Path{"Logger"}, pattern, std::forward<Args>(args)...) {}
+
+			/**
+			 * @brief Copy a plain message under `StormByte.Logger`.
+			 * @param message Exception text. Not a format string.
+			 */
+			explicit Exception(std::string_view message);
+
+			/**
+			 * @brief Plain message under an additional Logger path.
+			 * @param path Additional segments nested below `StormByte.Logger`.
+			 * @param message Exception text. Not a format string.
+			 */
+			Exception(Path path, std::string_view message);
+
+			/**
+			 * @brief Replace literal `{}` under an additional Logger path.
+			 * @tparam Args Views, numbers, or types that convert to `std::string`. A number uses `std::to_string`.
+			 * @param path Additional segments nested below `StormByte.Logger`.
+			 * @param pattern Body with literal `{}` tokens. Not a `std::format` string.
+			 * @param args Replacements. One per token, in order.
+			 */
+			template <typename... Args>
+				requires (sizeof...(Args) >= 1)
+			Exception(Path path, std::string_view pattern, Args&&... args)
+				: Exception(path, static_cast<std::string_view>(StormByte::Safe::String::ReplaceToken(pattern, std::forward<Args>(args)...))) {}
+
+			/**
+			 * @brief Copy constructor.
+			 * @param other Exception to copy.
+			 */
+			Exception(const Exception& other) = default;
+
+			/**
+			 * @brief Move constructor.
+			 * @param other Exception to move.
+			 */
+			Exception(Exception&& other) noexcept = default;
 
 			/**
 			 * @brief Destructor. Defined in this module so `catch` matches across a DLL.
 			 */
 			~Exception() noexcept override;
 
-		protected:
 			/**
-			 * @brief Format under @c StormByte.Logger with the child segment appended.
-			 * @tparam Args Format argument types.
-			 * @param child Segment under `Logger`.
-			 * @param fmt Format string.
-			 * @param args Format arguments.
+			 * @brief Copy assignment operator.
+			 * @param other Exception to copy.
+			 * @return This exception.
 			 */
-			template <typename... Args>
-			explicit Exception(StormByte::Exception::Path child, std::format_string<Args...> fmt, Args&&... args)
-				: StormByte::Exception(
-					StormByte::Exception::Path{std::string("Logger.") + std::string(child.text)},
-					fmt,
-					std::forward<Args>(args)...) {}
+			Exception& operator=(const Exception& other) = default;
+
+			/**
+			 * @brief Move assignment operator.
+			 * @param other Exception to move.
+			 * @return This exception.
+			 */
+			Exception& operator=(Exception&& other) noexcept = default;
 	};
 
 	/**

@@ -54,10 +54,6 @@
 #include <utility>
 #include <vector>
 
-StormByte::Logger::Exception::~Exception() noexcept = default;
-
-StormByte::Logger::ThrottleError::~ThrottleError() noexcept = default;
-
 using namespace StormByte::Logger;
 
 namespace {
