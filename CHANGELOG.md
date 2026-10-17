@@ -30,6 +30,7 @@ If you landed here from a release link and have not read the tree:
 
 - `ENABLE_PGO` and `ENABLE_LTO`. Profile-guided optimization trains in `pgo-instr` and installs this build. Link-time optimization follows `ENABLE_LTO` (default ON) for every build type. Both apply to Logger. Base is not rebuilt.
 - Release archives include `THIRD-PARTY` (not `THIRDPARTY`: on Windows and macOS that name is the same path as the `thirdparty/` directory, so the file never landed in those zips). No third-party object code is compiled into this shared library. StormByte Base is linked at run time and keeps its own notice.
+- `PerfTests` trains the hot path, not only lines already dropped by the print floor. Each iteration mixes a level under the floor (no conversion and no throttle), a level that passes the floor and is then refused, and a sparse line that is written. Drop, Sample, Window and a live rate bucket are all exercised, including a scoped facade, a group rule and `ThreadedLog` from several threads. Admission therefore has a profile with and without the line lock.
 
 ### Changed
 
