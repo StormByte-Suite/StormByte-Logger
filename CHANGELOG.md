@@ -22,21 +22,14 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
-### Added
-
-- Release archives include `THIRD-PARTY` (not `THIRDPARTY`: on Windows and macOS that name is the same path as the `thirdparty/` directory, so the file never landed in those zips). No third-party object code is compiled into this shared library. StormByte Base is linked at run time and keeps its own notice.
-
-### Fixed
-
-- `cmake/pgo.cmake` matches Base. MSVC PGO links with `/LTCG:PGINSTRUMENT` and `/LTCG:PGOPTIMIZE`. `/GENPROFILE` alone fails with LNK1220 because the current `link.exe` requires an `/LTCG` specification, and CMake's own `/LTCG` stays off so it does not replace the profile mode.
-
 [Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.2...HEAD
 
-## [2.0.2] - 2026-10-16
+## [2.0.2] - 2026-10-17
 
 ### Added
 
 - `ENABLE_PGO` and `ENABLE_LTO`. Profile-guided optimization trains in `pgo-instr` and installs this build. Link-time optimization follows `ENABLE_LTO` (default ON) for every build type. Both apply to Logger. Base is not rebuilt.
+- Release archives include `THIRD-PARTY` (not `THIRDPARTY`: on Windows and macOS that name is the same path as the `thirdparty/` directory, so the file never landed in those zips). No third-party object code is compiled into this shared library. StormByte Base is linked at run time and keeps its own notice.
 
 ### Changed
 
@@ -50,6 +43,7 @@ If you landed here from a release link and have not read the tree:
 
 - Human-readable numbers keep en_US grouping (`1,000`) when the named C++ locale has no thousands separator. musl does not group `en_US.UTF-8`, so `humanreadable_number` printed `1000` and redaction counted the shorter text.
 - Part of the port: the DLL does not return a `std::` object. `std::strong_ordering` is not a DLL ABI. clang-cl returns it through a hidden pointer and MSVC does not pass one, so a call into a clang-built Base wrote at address 0. Ordering is compiled by the caller from Base 2.1.0, where those operators are `STORMBYTE_FORCE_INLINE`. A signature that must return `std::` (`operator std::string`) is `STORMBYTE_FORCE_INLINE` in the header too. This archive must be built against that Base.
+- `cmake/pgo.cmake` matches Base. MSVC PGO links with `/LTCG:PGINSTRUMENT` and `/LTCG:PGOPTIMIZE`. `/GENPROFILE` alone fails with LNK1220 because the current `link.exe` requires an `/LTCG` specification, and CMake's own `/LTCG` stays off so it does not replace the profile mode.
 
 [2.0.2]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.1...2.0.2
 
