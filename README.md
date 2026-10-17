@@ -552,7 +552,7 @@ From 2.0.0, original StormByte-Logger source is dual-licensed:
 
 Neither license covers other StormByte modules or third-party material shipped under `thirdparty/` (including the bundled Base tree). Those keep their own licenses. Neither license grants patent rights.
 
-Binary releases add THIRDPARTY beside LICENSE. That file is a notice for what was compiled into the shared library, not another grant. The texts it names are the COPYING.* files in the same archive.
+Binary releases add THIRD-PARTY beside LICENSE. That file is a notice for what was compiled into the shared library, not another grant. The texts it names are the COPYING.* files in the same archive.
 
 Static linking under the LGPL is described under [Installation](#installation).
 
