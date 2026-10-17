@@ -45,7 +45,7 @@ If you landed here from a release link and have not read the tree:
 ### Fixed
 
 - Human-readable numbers keep en_US grouping (`1,000`) when the named C++ locale has no thousands separator. musl does not group `en_US.UTF-8`, so `humanreadable_number` printed `1000` and redaction counted the shorter text.
-- Part of the port: Logger exports no `operator<=>`. `std::strong_ordering` is not a DLL ABI. clang-cl returns it through a hidden pointer and MSVC does not pass one, so a call into a clang-built Base wrote at address 0. Ordering is compiled by the caller from Base 2.1.0, where those operators are `STORMBYTE_FORCE_INLINE`. This archive must be built against that Base.
+- Part of the port: the DLL does not return a `std::` object. `std::strong_ordering` is not a DLL ABI. clang-cl returns it through a hidden pointer and MSVC does not pass one, so a call into a clang-built Base wrote at address 0. Ordering is compiled by the caller from Base 2.1.0, where those operators are `STORMBYTE_FORCE_INLINE`. A signature that must return `std::` (`operator std::string`) is `STORMBYTE_FORCE_INLINE` in the header too. This archive must be built against that Base.
 
 [2.0.2]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.1...2.0.2
 
