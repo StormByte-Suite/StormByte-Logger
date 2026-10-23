@@ -22,7 +22,13 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.2...HEAD
+[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.3...HEAD
+
+## [2.0.3] - 2026-10-23
+
+Bumped version to use StormByte base 2.2.0 bundled
+
+[2.0.3]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.2...2.0.3
 
 ## [2.0.2] - 2026-10-19
 
