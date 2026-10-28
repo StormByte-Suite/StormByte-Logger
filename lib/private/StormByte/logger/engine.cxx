@@ -371,6 +371,8 @@ StormByte::Logger::Color Engine::Color(const Level& level) const noexcept {
 }
 
 StormByte::Logger::Color Engine::Color(const std::string& component, const Level& level) const {
+	if (m_component_colors.empty())
+		return Color(level);
 	for (std::string path = component; !path.empty(); path = ParentPath(path)) {
 		if (const auto found = m_component_colors.find(path); found != m_component_colors.end())
 			return found->second[ColorIndex(level)];
@@ -381,6 +383,8 @@ StormByte::Logger::Color Engine::Color(const std::string& component, const Level
 const std::string& Engine::effective_format() const {
 	if (!m_format_stack.empty())
 		return m_format_stack.back();
+	if (m_component_formats.empty())
+		return m_format;
 	const auto& component = t_line.decided ? t_line.component : CurrentPath();
 	for (std::string path = component; !path.empty(); path = ParentPath(path)) {
 		if (const auto found = m_component_formats.find(path); found != m_component_formats.end())
@@ -789,11 +793,12 @@ void Engine::print_level(std::string& out) const noexcept try {
 }
 
 void Engine::print_thread_id(std::string& out) const noexcept try {
-	thread_local std::ostringstream id;
-	id.str({});
-	id.clear();
-	id << std::this_thread::get_id();
-	out += id.str();
+	thread_local const std::string id = [] {
+		std::ostringstream text;
+		text << std::this_thread::get_id();
+		return text.str();
+	}();
+	out += id;
 } catch (...) {
 }
 
@@ -872,8 +877,8 @@ void Engine::emit_color(const StormByte::Logger::Color color) noexcept {
 
 void Engine::sync_content_color() noexcept try {
 	const auto level = t_line.decided ? t_line.level : t_level.value_or(m_print_level);
-	const auto component = t_line.decided ? t_line.component : CurrentPath();
-	const auto configured = Color(component, level);
+	const auto configured = m_component_colors.empty() ? Color(level)
+		: Color(t_line.decided ? t_line.component : CurrentPath(), level);
 	if (m_content_nocolor)
 		emit_color(StormByte::Logger::Color::Default);
 	else if (m_content_color)

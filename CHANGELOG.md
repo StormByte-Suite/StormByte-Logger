@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 StormByte Logger is the stream-logging module of the StormByte C++ suite.
 
-It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.1.0) 2.1.0 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.0. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
+It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.2.2) 2.2.2 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.0. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
 
 Public headers under `StormByte/logger/` cover `Log`, `ThreadedLog`, header formats (`%L` `%T` `%i` `%c` `%g`), hierarchical components and `Scope` facades, groups, ANSI colors, temporary formats, human-readable numbers and bytes, redaction of text and numbers, hex dumps (`hex` / `nohex`), and binary payloads (`std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::Safe::Binary`, default Base64). Owned text that crosses the logger DLL boundary uses `StormByte::Safe::String` / `WString`; `StormByte::Size` and `StormByte::ByteSize` are accepted as payloads. Views and caller-owned `std::string` are consumed synchronously. `group`, `component` and `push_format` are caller-side factories: a literal binds to `const char*`, `std::string` and `std::string_view` bind to the view, and `StormByte::Safe::String` binds by identity. The owned text is built in the caller.
 
@@ -22,7 +22,21 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.4...HEAD
+[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.5...HEAD
+
+## [2.0.5] - 2026-10-28
+
+### Changed
+
+- Header `%i` formatting reuses the thread's formatted identifier instead of running a string stream for every line.
+- Scoped logging skips component-path copies and ancestor lookups when no component-specific format or color exists. Overrides installed later still take effect immediately; emitted text, colors, filtering, throttling and line locking are unchanged.
+- Bundled builds use Base 2.2.2.
+
+### Added
+
+- Regression coverage for repeated thread-ID tokens on different threads and component overrides installed after default scoped output.
+
+[2.0.5]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.4...2.0.5
 
 ## [2.0.4] - 2026-10-24
 

@@ -39,11 +39,13 @@
  */
 
 #include <StormByte/logger/log.hxx>
+#include <StormByte/logger/threaded_log.hxx>
 #include <StormByte/test_handlers.h>
 
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 
 using namespace StormByte::Logger;
 
@@ -64,6 +66,44 @@ int test_format_mask_literals() {
 	RETURN_TEST(0);
 }
 
+int test_thread_id_mask_is_reused_per_thread_without_changing_text() {
+	std::ostringstream output;
+	ThreadedLog log(output, Level::Info, "%i/%i:");
+	auto write = [&]() {
+		std::ostringstream id;
+		id << std::this_thread::get_id();
+		for (int i = 0; i < 3; ++i)
+			log << Level::Info << id.str() << std::endl;
+		return id.str();
+	};
+	const std::string main_id = write();
+	std::string worker_id;
+	std::thread worker([&]() { worker_id = write(); });
+	worker.join();
+	ASSERT_TRUE(main_id != worker_id);
+	const auto line = [](const std::string& id) { return id + "/" + id + ": " + id + "\n"; };
+	ASSERT_EQUAL(line(main_id) + line(main_id) + line(main_id)
+		+ line(worker_id) + line(worker_id) + line(worker_id), output.str());
+	RETURN_TEST(0);
+}
+
+int test_component_overrides_after_default_scoped_emission() {
+	std::ostringstream output;
+	Log log(output, Level::Info, "%c:");
+	auto scoped = log.Scope("parent/child/long-component");
+	*scoped << Level::Info << "default" << std::endl;
+	log.Format("parent", "[%c]");
+	log.Color("parent", Level::Info, Color::Red);
+	*scoped << Level::Info << "override" << std::endl;
+	log.Format("parent", "");
+	log.Color("parent", Level::Info, Color::Default);
+	*scoped << Level::Info << "restored" << std::endl;
+	ASSERT_EQUAL(std::string{"parent/child/long-component: default\n"
+		"\033[31m[parent/child/long-component] override\033[0m\n"
+		"parent/child/long-component: restored\n"}, output.str());
+	RETURN_TEST(0);
+}
+
 int main() {
 	int result = 0;
 
@@ -71,6 +111,8 @@ int main() {
 	// Format
 	// -------------------
 	result += test_format_mask_literals();
+	result += test_thread_id_mask_is_reused_per_thread_without_changing_text();
+	result += test_component_overrides_after_default_scoped_emission();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;
