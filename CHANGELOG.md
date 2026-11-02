@@ -29,6 +29,7 @@ If you landed here from a release link and have not read the tree:
 ### Changed
 
 - Bundled builds use StormByte Base 2.2.3.
+- Rebuild release packages against the refreshed Base 2.2.3 release, including allocation-safe telemetry and map/set constructor fixes.
 - Require BuildMaster 2.1.3 and pin its bundled submodule to the published release.
 
 [2.0.6]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.5...2.0.6
