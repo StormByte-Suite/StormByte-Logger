@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 StormByte Logger is the stream-logging module of the StormByte C++ suite.
 
-It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.2.2) 2.2.2 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.0. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
+It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.2.3) 2.2.3 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.3. This repository is not Base, Buffer, Config, Crypto, Database, Multimedia, Network or System.
 
 Public headers under `StormByte/logger/` cover `Log`, `ThreadedLog`, header formats (`%L` `%T` `%i` `%c` `%g`), hierarchical components and `Scope` facades, groups, ANSI colors, temporary formats, human-readable numbers and bytes, redaction of text and numbers, hex dumps (`hex` / `nohex`), and binary payloads (`std::span<const std::byte>`, `std::vector<std::byte>` and `StormByte::Safe::Binary`, default Base64). Owned text that crosses the logger DLL boundary uses `StormByte::Safe::String` / `WString`; `StormByte::Size` and `StormByte::ByteSize` are accepted as payloads. Views and caller-owned `std::string` are consumed synchronously. `group`, `component` and `push_format` are caller-side factories: a literal binds to `const char*`, `std::string` and `std::string_view` bind to the view, and `StormByte::Safe::String` binds by identity. The owned text is built in the caller.
 
@@ -22,11 +22,16 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.6...HEAD
+
+## [2.0.6] - 2026-11-02
+
 ### Changed
 
+- Bundled builds use StormByte Base 2.2.3.
 - Require BuildMaster 2.1.3 and pin its bundled submodule to the published release.
 
-[Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.5...HEAD
+[2.0.6]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.5...2.0.6
 
 ## [2.0.5] - 2026-10-28
 
