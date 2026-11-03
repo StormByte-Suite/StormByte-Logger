@@ -31,6 +31,8 @@ If you landed here from a release link and have not read the tree:
 - **Breaking:** Require Base 3.0.0 and select its Linux archive by architecture, libc and C++ standard library. Previous archive names and component packages without their own finder are unsupported.
 - Require StormByte-BuildMaster 2.1.4 and pin the bundled submodule to that release.
 - Leave CPU targeting and build-type optimization levels to the toolchain instead of imposing architecture-specific flags; `ENABLE_LTO` still controls interprocedural optimization.
+- Build the same Linux amd64/arm64, glibc/musl and GCC/libstdc++ or Clang/libc++ variants in CI and releases. CI disables PGO and LTO; releases enable both and use the shared action's automatic CPU baselines.
+- **Breaking:** Linux release ZIP names now include `amd64` or `arm64`, libc and C++ standard library; previous asset names are not supported.
 
 ### Fixed
 
