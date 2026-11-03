@@ -35,12 +35,10 @@ set_target_properties(StormByte-Logger PROPERTIES
 if(MSVC)
 	target_compile_options(StormByte-Logger PRIVATE
 		/EHsc
-		$<$<CONFIG:Release>:/O2>
-		$<$<CONFIG:Debug>:/Od>
 	)
 else()
 	target_compile_options(StormByte-Logger PRIVATE
-		$<$<CONFIG:Debug>:-pipe -g -ggdb -Wall -Wextra -Wnon-virtual-dtor -pedantic -pedantic-errors -O0>
+		$<$<CONFIG:Debug>:-pipe -g -ggdb -Wall -Wextra -Wnon-virtual-dtor -pedantic -pedantic-errors>
 	)
 endif()
 

@@ -30,6 +30,7 @@ If you landed here from a release link and have not read the tree:
 
 - **Breaking:** Require Base 3.0.0 and select its Linux archive by architecture, libc and C++ standard library. Previous archive names and component packages without their own finder are unsupported.
 - Require StormByte-BuildMaster 2.1.4 and pin the bundled submodule to that release.
+- Leave CPU targeting and build-type optimization levels to the toolchain instead of imposing architecture-specific flags; `ENABLE_LTO` still controls interprocedural optimization.
 
 [Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.6...HEAD
 
