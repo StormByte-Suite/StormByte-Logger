@@ -9,7 +9,7 @@
 
 This repository is **StormByte Logger**: stream logging for the StormByte C++ suite.
 
-It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte) 2.2.3 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.3. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Size`, `StormByte::ByteSize`, `StormByte::Safe::Binary`).
+It depends directly on [StormByte Base](https://github.com/StormByte-Suite/StormByte) 3.0.0 and [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.4. Public headers live under `StormByte/logger/` and cover `Log`, `ThreadedLog`, header formats, hierarchical components, `Scope` facades, groups, colors, temporary formats, human-readable numbers, redaction, hex dumps, binary payloads, and owned text types that can cross a DLL / `.so` boundary (`StormByte::Safe::String` / `WString`, `StormByte::Size`, `StormByte::ByteSize`, `StormByte::Safe::Binary`).
 
 The suite is split on purpose. Base, Buffer, Config, Crypto, Database, Multimedia, Network and System are **other repositories**. This one does not implement them.
 
@@ -143,7 +143,7 @@ A component format override can introduce `%c` / `%g` even when the general form
 
 ## Installation
 
-Needs a C++26 compiler, CMake 3.28 or newer, [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.3, and [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/2.2.3) 2.2.3. Configure downloads the matching Base release archive. There is no Base submodule. BuildMaster is the installed package when it is >= 2.1.3, otherwise the `buildmaster` submodule.
+Needs a C++26 compiler, CMake 3.28 or newer, [StormByte-BuildMaster](https://github.com/StormByte-Suite/StormByte-BuildMaster) >= 2.1.4, and [StormByte Base](https://github.com/StormByte-Suite/StormByte/releases/tag/3.0.0) 3.0.0. Configure downloads the matching Base release archive. There is no Base submodule. BuildMaster is the installed package when it is >= 2.1.4, otherwise the `buildmaster` submodule.
 
 ```sh
 git clone --recursive https://github.com/StormByte-Suite/StormByte-Logger.git
@@ -156,7 +156,15 @@ Shared vs static follows CMake `BUILD_SHARED_LIBS` (default ON). A plain configu
 
 A shared build keeps this library as its own `.so` / `.dll`. Under the LGPL that is usually the simpler way to ship: the user can replace that file. A static archive is folded into your binary. The LGPL still applies to this code; you must give the recipient a way to relink your product with a different build of this library. If that does not fit how you distribute the final product, a commercial license is available from the copyright holder (see [License](#license)).
 
-Link `StormByte-Logger` (and Base). Include path: the public install prefix, headers as `#include <StormByte/logger/….hxx>`.
+For an installed Base and Logger prefix, use the component finder:
+
+```cmake
+find_package(StormByte REQUIRED COMPONENTS Base Logger)
+target_link_libraries(app PRIVATE StormByte::Logger)
+```
+
+The Logger finder is installed in `share/cmake/Modules` beside Base's finder.
+Include path: the public install prefix, headers as `#include <StormByte/logger/….hxx>`.
 
 ## Usage
 

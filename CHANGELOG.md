@@ -22,6 +22,15 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+### Added
+
+- Install `FindStormByteLogger.cmake` so Base 3.0.0 can discover Logger as a component.
+
+### Changed
+
+- **Breaking:** Require Base 3.0.0 and select its Linux archive by architecture, libc and C++ standard library. Previous archive names and component packages without their own finder are unsupported.
+- Require StormByte-BuildMaster 2.1.4 and pin the bundled submodule to that release.
+
 [Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.6...HEAD
 
 ## [2.0.6] - 2026-11-02
