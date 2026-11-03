@@ -32,6 +32,10 @@ If you landed here from a release link and have not read the tree:
 - Require StormByte-BuildMaster 2.1.4 and pin the bundled submodule to that release.
 - Leave CPU targeting and build-type optimization levels to the toolchain instead of imposing architecture-specific flags; `ENABLE_LTO` still controls interprocedural optimization.
 
+### Fixed
+
+- Reconfigure automatically when `VERSION` changes so rebuilt and installed artifacts use the updated project version.
+
 [Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.6...HEAD
 
 ## [2.0.6] - 2026-11-02
