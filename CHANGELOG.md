@@ -24,7 +24,7 @@ If you landed here from a release link and have not read the tree:
 
 [Unreleased]: https://github.com/StormByte-Suite/StormByte-Logger/compare/3.0.0...HEAD
 
-## [3.0.0] - 2026-11-03
+## [3.0.0] - 2026-11-04
 
 ### Added
 
@@ -40,6 +40,7 @@ If you landed here from a release link and have not read the tree:
 
 ### Fixed
 
+- PGO training runner now prepends its library directories to `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH` with the `:` separator (previously `;`, which broke library lookup on musl) and no longer appends an empty entry when the variable is unset.
 - Reconfigure automatically when `VERSION` changes so rebuilt and installed artifacts use the updated project version.
 
 [3.0.0]: https://github.com/StormByte-Suite/StormByte-Logger/compare/2.0.6...3.0.0
